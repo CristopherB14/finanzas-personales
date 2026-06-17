@@ -4,27 +4,12 @@ import {
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
 } from "@/constants/categories";
+import { migrateOrphanTransactions } from "@/lib/data/accounts";
 
-export async function ensureUserSetup(userId: string, currency = "ARS") {
+export async function ensureUserSetup(userId: string) {
   const supabase = createClient();
 
-  const { data: accounts } = await supabase
-    .from("accounts")
-    .select("id")
-    .eq("user_id", userId)
-    .limit(1);
-
-  if (!accounts?.length) {
-    await supabase.from("accounts").insert({
-      user_id: userId,
-      name: "Cuenta principal",
-      type: "checking",
-      balance_cents: 0,
-      currency_code: currency,
-      is_default: true,
-      client_id: uuidv4(),
-    });
-  }
+  await migrateOrphanTransactions(userId);
 
   const { data: categories } = await supabase
     .from("categories")
@@ -53,16 +38,6 @@ export async function ensureUserSetup(userId: string, currency = "ARS") {
     }));
     await supabase.from("categories").insert([...expenseRows, ...incomeRows]);
   }
-}
-
-export async function fetchAccounts(userId: string) {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("accounts")
-    .select("*")
-    .eq("user_id", userId)
-    .order("is_default", { ascending: false });
-  return data ?? [];
 }
 
 export async function fetchCategories(

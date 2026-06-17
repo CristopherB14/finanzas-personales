@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AccountIcon } from "@/components/accounts/account-icon";
 import { parseMoneyInput } from "@/lib/format";
 import type { Account, Category, TransactionType } from "@/types/database";
 
@@ -28,7 +30,7 @@ interface TransactionFormProps {
 
 export function TransactionForm({
   type,
-  userId,
+  userId: _userId,
   accounts,
   categories,
   currency,
@@ -41,6 +43,7 @@ export function TransactionForm({
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (accounts[0] && !accountId) setAccountId(accounts[0].id);
@@ -51,8 +54,16 @@ export function TransactionForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     const cents = parseMoneyInput(amount);
-    if (cents <= 0) return;
+    if (cents <= 0) {
+      setError("Ingresá un monto válido.");
+      return;
+    }
+    if (!accountId) {
+      setError("Seleccioná una cuenta.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -76,6 +87,17 @@ export function TransactionForm({
     <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-5">
       <h1 className="text-2xl font-bold">{title}</h1>
 
+      {accounts.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
+          <p className="text-slate-600">
+            Necesitás al menos una cuenta para registrar un movimiento.
+          </p>
+          <Button asChild className="mt-4">
+            <Link href="/cuentas/nueva">Crear cuenta</Link>
+          </Button>
+        </div>
+      ) : (
+        <>
       <div className="space-y-2">
         <Label htmlFor="amount">Monto</Label>
         <Input
@@ -117,18 +139,31 @@ export function TransactionForm({
 
       <div className="space-y-2">
         <Label htmlFor="account">Cuenta</Label>
-        <select
-          id="account"
-          value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-          className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-900"
-        >
+        <div className="space-y-2">
           {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => setAccountId(a.id)}
+              className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
+                accountId === a.id
+                  ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
+              }`}
+            >
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{
+                  backgroundColor: `${a.color ?? "#64748b"}20`,
+                  color: a.color ?? "#64748b",
+                }}
+              >
+                <AccountIcon icon={a.icon} className="h-4 w-4" />
+              </span>
               {a.name}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -151,9 +186,13 @@ export function TransactionForm({
         />
       </div>
 
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       <Button type="submit" className="w-full" size="lg" disabled={saving}>
         {saving ? "Guardando…" : "Guardar"}
       </Button>
+        </>
+      )}
     </form>
   );
 }

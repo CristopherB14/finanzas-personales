@@ -4,24 +4,20 @@ import { useEffect, useState } from "react";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
-import {
-  ensureUserSetup,
-  fetchAccounts,
-  fetchCategories,
-} from "@/lib/data/seed-user";
-import type { Account, Category } from "@/types/database";
+import { useAccounts } from "@/hooks/use-accounts";
+import { ensureUserSetup, fetchCategories } from "@/lib/data/seed-user";
+import type { Category } from "@/types/database";
 
 export default function NuevoIngresoPage() {
   const { user } = useUser();
   const { addTransaction } = useTransactions(user?.id);
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const { accounts } = useAccounts(user?.id);
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     if (!user?.id) return;
     void (async () => {
       await ensureUserSetup(user.id);
-      setAccounts(await fetchAccounts(user.id));
       setCategories(await fetchCategories(user.id, "income"));
     })();
   }, [user?.id]);

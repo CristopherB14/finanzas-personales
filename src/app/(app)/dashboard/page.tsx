@@ -5,22 +5,30 @@ import { Plus } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { StatusBanner } from "@/components/dashboard/status-banner";
 import { MonthlyChart } from "@/components/charts/monthly-chart";
+import { AccountIcon } from "@/components/accounts/account-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
+import { useAccounts } from "@/hooks/use-accounts";
 import { formatMoney } from "@/lib/format";
 import {
   buildDashboardMetrics,
   last6MonthsChart,
 } from "@/lib/finance/calculations";
+import {
+  accountBalanceFromTransactions,
+  totalBalanceFromTransactions,
+  transactionCountByAccount,
+} from "@/lib/data/accounts";
 import { ensureUserSetup } from "@/lib/data/seed-user";
 import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
   const { transactions, loading: txLoading } = useTransactions(user?.id);
+  const { accounts } = useAccounts(user?.id);
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -33,15 +41,13 @@ export default function DashboardPage() {
     return <p className="text-slate-500">Cargando tu resumen…</p>;
   }
 
+  const totalBalance = totalBalanceFromTransactions(transactions);
+
   const metrics = buildDashboardMetrics(
     transactions,
     year,
     month,
-    transactions.reduce((sum, t) => {
-      if (t.type === "income") return sum + t.amount_cents;
-      if (t.type === "expense") return sum - t.amount_cents;
-      return sum;
-    }, 0)
+    totalBalance
   );
 
   const chartData = last6MonthsChart(transactions);
@@ -86,6 +92,57 @@ export default function DashboardPage() {
       </div>
 
       <StatusBanner status={metrics.status} message={metrics.statusMessage} />
+
+      {accounts.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Saldo por cuenta</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/cuentas">Ver todas</Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {accounts.slice(0, 5).map((account) => {
+              const balance = accountBalanceFromTransactions(
+                account.id,
+                transactions
+              );
+              const count = transactionCountByAccount(account.id, transactions);
+              return (
+                <div
+                  key={account.id}
+                  className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-lg"
+                      style={{
+                        backgroundColor: `${account.color ?? "#64748b"}20`,
+                        color: account.color ?? "#64748b",
+                      }}
+                    >
+                      <AccountIcon icon={account.icon} className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium">{account.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {count} {count === 1 ? "movimiento" : "movimientos"}
+                      </p>
+                    </div>
+                  </div>
+                  <p
+                    className={`text-sm font-semibold tabular-nums ${
+                      balance >= 0 ? "text-emerald-600" : "text-red-600"
+                    }`}
+                  >
+                    {formatMoney(balance, account.currency_code)}
+                  </p>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

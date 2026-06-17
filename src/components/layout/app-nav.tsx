@@ -8,6 +8,7 @@ import {
   TrendingUp,
   PiggyBank,
   Plus,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/gastos", label: "Gastos", icon: TrendingDown },
   { href: "/gastos/nuevo", label: "Agregar", icon: Plus, highlight: true },
   { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
+  { href: "/cuentas", label: "Cuentas", icon: Wallet },
   { href: "/presupuesto", label: "Presupuesto", icon: PiggyBank },
 ];
 
@@ -23,6 +25,7 @@ const sidebarItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
   { href: "/gastos", label: "Gastos", icon: TrendingDown },
+  { href: "/cuentas", label: "Cuentas", icon: Wallet },
   { href: "/presupuesto", label: "Presupuesto", icon: PiggyBank },
 ];
 

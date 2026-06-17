@@ -21,7 +21,10 @@ export interface Account {
   id: string;
   user_id: string;
   name: string;
+  description: string | null;
   type: AccountType;
+  icon: string | null;
+  color: string | null;
   balance_cents: number;
   currency_code: string;
   is_default: boolean;
