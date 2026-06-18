@@ -45,7 +45,7 @@ export async function getLocalTransactions(
   to?: string
 ): Promise<LocalTransaction[]> {
   if (!localDb) return [];
-  let collection = localDb.transactions.where("user_id").equals(userId);
+  const collection = localDb.transactions.where("user_id").equals(userId);
   const all = await collection.toArray();
   return all
     .filter((t) => {
@@ -62,9 +62,34 @@ export async function saveLocalTransaction(tx: LocalTransaction): Promise<void> 
     ...tx,
     _syncStatus: tx._syncStatus ?? "pending",
   });
+  await enqueueSync("insert", tx);
+}
+
+export async function updateLocalTransaction(tx: LocalTransaction): Promise<void> {
+  if (!localDb) return;
+  const updated: LocalTransaction = {
+    ...tx,
+    updated_at: new Date().toISOString(),
+    _syncStatus: "pending",
+  };
+  await localDb.transactions.put(updated);
+  await enqueueSync("update", updated);
+}
+
+export async function deleteLocalTransaction(tx: LocalTransaction): Promise<void> {
+  if (!localDb) return;
+  await localDb.transactions.delete(tx.id);
+  await enqueueSync("delete", tx);
+}
+
+async function enqueueSync(
+  operation: SyncQueueItem["operation"],
+  tx: LocalTransaction
+): Promise<void> {
+  if (!localDb) return;
   await localDb.syncQueue.add({
     table: "transactions",
-    operation: "insert",
+    operation,
     payload: tx as unknown as Record<string, unknown>,
     client_id: tx.client_id,
     created_at: new Date().toISOString(),

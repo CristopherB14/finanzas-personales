@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   TrendingDown,
@@ -9,7 +9,11 @@ import {
   PiggyBank,
   Plus,
   Wallet,
+  ArrowLeftRight,
+  Tags,
+  LogOut,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -25,12 +29,22 @@ const sidebarItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
   { href: "/gastos", label: "Gastos", icon: TrendingDown },
+  { href: "/flujo-de-caja", label: "Flujo de caja", icon: ArrowLeftRight },
   { href: "/cuentas", label: "Cuentas", icon: Wallet },
+  { href: "/categorias", label: "Categorías", icon: Tags },
   { href: "/presupuesto", label: "Presupuesto", icon: PiggyBank },
 ];
 
 export function AppNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.refresh();
+    router.push("/login");
+  };
 
   return (
     <>
@@ -62,6 +76,14 @@ export function AppNav() {
           <Plus className="h-4 w-4" />
           Registrar gasto
         </Link>
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900"
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </button>
       </aside>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95">

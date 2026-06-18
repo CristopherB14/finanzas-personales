@@ -1,3 +1,4 @@
+import type { CategoryBudgetConfig } from "@/types/budget";
 import type { Transaction } from "@/types/database";
 import {
   endOfMonth,
@@ -134,6 +135,31 @@ export function last6MonthsChart(
   }
 
   return points;
+}
+
+export function resolveCategoryBudgetLimit(
+  config: CategoryBudgetConfig | undefined,
+  monthlyIncomeCents: number
+): number {
+  if (!config) return 0;
+
+  if (config.mode === "percentage") {
+    if (monthlyIncomeCents <= 0 || config.percentage <= 0) return 0;
+    return Math.round((monthlyIncomeCents * config.percentage) / 100);
+  }
+
+  return Math.max(0, config.fixedCents);
+}
+
+export function computeBudgetLimits(
+  categories: Record<string, CategoryBudgetConfig>,
+  monthlyIncomeCents: number
+): Record<string, number> {
+  const limits: Record<string, number> = {};
+  for (const [categoryId, config] of Object.entries(categories)) {
+    limits[categoryId] = resolveCategoryBudgetLimit(config, monthlyIncomeCents);
+  }
+  return limits;
 }
 
 export function budgetUsagePercent(

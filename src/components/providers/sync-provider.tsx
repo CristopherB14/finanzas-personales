@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useOnline } from "@/hooks/use-online";
+import { ensureUserSetup } from "@/lib/data/seed-user";
 import { startAutoSync } from "@/lib/sync/sync-engine";
 import { OfflineBanner } from "@/components/layout/app-nav";
 
@@ -12,7 +13,19 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user?.id) return;
-    return startAutoSync(user.id);
+
+    let cancelled = false;
+
+    void ensureUserSetup(user.id).finally(() => {
+      if (cancelled) return;
+    });
+
+    const stopSync = startAutoSync(user.id);
+
+    return () => {
+      cancelled = true;
+      stopSync();
+    };
   }, [user?.id]);
 
   return (

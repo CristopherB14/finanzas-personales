@@ -5,6 +5,9 @@ import type { LocalTransaction } from "@/types/database";
 export type SyncState = "idle" | "syncing" | "offline" | "error";
 
 let listeners: ((state: SyncState) => void)[] = [];
+let completeListeners: (() => void)[] = [];
+let activeSyncCleanup: (() => void) | null = null;
+let activeSyncUserId: string | null = null;
 
 export function onSyncStateChange(cb: (state: SyncState) => void) {
   listeners.push(cb);
@@ -13,8 +16,19 @@ export function onSyncStateChange(cb: (state: SyncState) => void) {
   };
 }
 
+export function onSyncComplete(cb: () => void) {
+  completeListeners.push(cb);
+  return () => {
+    completeListeners = completeListeners.filter((l) => l !== cb);
+  };
+}
+
 function notify(state: SyncState) {
   listeners.forEach((l) => l(state));
+}
+
+function notifyComplete() {
+  completeListeners.forEach((l) => l());
 }
 
 export async function pushPendingChanges(userId: string): Promise<void> {
@@ -29,6 +43,26 @@ export async function pushPendingChanges(userId: string): Promise<void> {
 
   for (const item of queue) {
     if (item.table !== "transactions") continue;
+
+    if (item.operation === "delete") {
+      const payload = item.payload as { client_id?: string };
+      if (!payload.client_id) continue;
+
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("user_id", userId)
+        .eq("client_id", payload.client_id);
+
+      if (error) {
+        notify("error");
+        throw error;
+      }
+
+      await localDb.syncQueue.delete(item.id!);
+      continue;
+    }
+
     const tx = item.payload as unknown as LocalTransaction;
 
     const { error } = await supabase.from("transactions").upsert(
@@ -94,12 +128,20 @@ export async function syncAll(userId: string): Promise<void> {
     await pushPendingChanges(userId);
     await pullRemoteChanges(userId);
     notify("idle");
+    notifyComplete();
   } catch {
     notify("error");
   }
 }
 
-export function startAutoSync(userId: string, intervalMs = 30000) {
+export function startAutoSync(userId: string, intervalMs = 60000) {
+  if (activeSyncUserId === userId && activeSyncCleanup) {
+    return activeSyncCleanup;
+  }
+
+  activeSyncCleanup?.();
+  activeSyncUserId = userId;
+
   const run = () => {
     if (navigator.onLine) void syncAll(userId);
     else notify("offline");
@@ -109,8 +151,15 @@ export function startAutoSync(userId: string, intervalMs = 30000) {
   window.addEventListener("online", run);
   const interval = setInterval(run, intervalMs);
 
-  return () => {
+  const cleanup = () => {
     window.removeEventListener("online", run);
     clearInterval(interval);
+    if (activeSyncUserId === userId) {
+      activeSyncUserId = null;
+      activeSyncCleanup = null;
+    }
   };
+
+  activeSyncCleanup = cleanup;
+  return cleanup;
 }

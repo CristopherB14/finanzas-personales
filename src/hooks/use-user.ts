@@ -10,17 +10,35 @@ export function useUser() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+    let cancelled = false;
+
+    const finish = (nextUser: User | null) => {
+      if (cancelled) return;
+      setUser(nextUser);
       setLoading(false);
-    });
+    };
+
+    void supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (error) {
+          finish(null);
+          return;
+        }
+        finish(data.user);
+      })
+      .catch(() => finish(null));
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+      finish(session?.user ?? null);
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return { user, loading };

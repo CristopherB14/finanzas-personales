@@ -5,35 +5,30 @@ import {
   createAccount,
   deleteAccount,
   fetchAccounts,
-  migrateOrphanTransactions,
   updateAccount,
 } from "@/lib/data/accounts";
 import type { Account, AccountType } from "@/types/database";
 
-async function loadAccounts(userId: string): Promise<Account[]> {
-  await migrateOrphanTransactions(userId);
-  return fetchAccounts(userId);
-}
-
 export function useAccounts(userId: string | undefined) {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const loading = Boolean(userId) && dataLoading;
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const data = await loadAccounts(userId);
+    const data = await fetchAccounts(userId);
     setAccounts(data);
-    setLoading(false);
+    setDataLoading(false);
   }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
 
-    void loadAccounts(userId).then((data) => {
+    void fetchAccounts(userId).then((data) => {
       if (!cancelled) {
         setAccounts(data);
-        setLoading(false);
+        setDataLoading(false);
       }
     });
 
@@ -88,7 +83,7 @@ export function useAccounts(userId: string | undefined) {
   };
 
   return {
-    accounts,
+    accounts: userId ? accounts : [],
     loading,
     refresh,
     addAccount,

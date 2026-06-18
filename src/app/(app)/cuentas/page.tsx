@@ -15,18 +15,12 @@ import {
   transactionCountByAccount,
 } from "@/lib/data/accounts";
 import { formatMoney } from "@/lib/format";
-import { ensureUserSetup } from "@/lib/data/seed-user";
-import { useEffect } from "react";
 
 export default function CuentasPage() {
   const { user } = useUser();
   const { accounts, loading } = useAccounts(user?.id);
   const { transactions } = useTransactions(user?.id);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    if (user?.id) void ensureUserSetup(user.id);
-  }, [user?.id]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

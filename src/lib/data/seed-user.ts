@@ -1,12 +1,14 @@
 import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@/lib/supabase/client";
 import {
-  DEFAULT_EXPENSE_CATEGORIES,
-  DEFAULT_INCOME_CATEGORIES,
-} from "@/constants/categories";
+  MIGRATION_EXPENSE_CATEGORIES,
+  MIGRATION_INCOME_CATEGORIES,
+} from "@/lib/categories/migration-defaults";
 import { migrateOrphanTransactions } from "@/lib/data/accounts";
 
-export async function ensureUserSetup(userId: string) {
+const setupPromises = new Map<string, Promise<void>>();
+
+async function runUserSetup(userId: string): Promise<void> {
   const supabase = createClient();
 
   await migrateOrphanTransactions(userId);
@@ -18,7 +20,7 @@ export async function ensureUserSetup(userId: string) {
     .limit(1);
 
   if (!categories?.length) {
-    const expenseRows = DEFAULT_EXPENSE_CATEGORIES.map((c, i) => ({
+    const expenseRows = MIGRATION_EXPENSE_CATEGORIES.map((c, i) => ({
       user_id: userId,
       name: c.name,
       type: "expense" as const,
@@ -27,7 +29,7 @@ export async function ensureUserSetup(userId: string) {
       sort_order: i,
       client_id: uuidv4(),
     }));
-    const incomeRows = DEFAULT_INCOME_CATEGORIES.map((c, i) => ({
+    const incomeRows = MIGRATION_INCOME_CATEGORIES.map((c, i) => ({
       user_id: userId,
       name: c.name,
       type: "income" as const,
@@ -40,13 +42,14 @@ export async function ensureUserSetup(userId: string) {
   }
 }
 
-export async function fetchCategories(
-  userId: string,
-  type?: "income" | "expense"
-) {
-  const supabase = createClient();
-  let q = supabase.from("categories").select("*").eq("user_id", userId);
-  if (type) q = q.eq("type", type);
-  const { data } = await q.order("sort_order");
-  return data ?? [];
+export function ensureUserSetup(userId: string): Promise<void> {
+  const existing = setupPromises.get(userId);
+  if (existing) return existing;
+
+  const promise = runUserSetup(userId).catch((error) => {
+    setupPromises.delete(userId);
+    throw error;
+  });
+  setupPromises.set(userId, promise);
+  return promise;
 }

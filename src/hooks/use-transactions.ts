@@ -4,75 +4,136 @@ import { useCallback, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@/lib/supabase/client";
 import {
+  deleteLocalTransaction,
   getLocalTransactions,
+  mergeRemoteTransactions,
   saveLocalTransaction,
+  updateLocalTransaction,
 } from "@/lib/db/local-db";
-import { startAutoSync } from "@/lib/sync/sync-engine";
+import { onSyncComplete } from "@/lib/sync/sync-engine";
 import type { LocalTransaction, TransactionType } from "@/types/database";
+
+export type TransactionInput = {
+  account_id: string;
+  category_id: string | null;
+  type: TransactionType;
+  amount_cents: number;
+  currency_code: string;
+  transaction_date: string;
+  description?: string;
+};
+
+function sortTransactions(transactions: LocalTransaction[]) {
+  return [...transactions].sort((a, b) => {
+    const dateCmp = b.transaction_date.localeCompare(a.transaction_date);
+    if (dateCmp !== 0) return dateCmp;
+    return b.updated_at.localeCompare(a.updated_at);
+  });
+}
+
+async function upsertRemoteTransaction(
+  userId: string,
+  tx: LocalTransaction
+): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("transactions").upsert(
+    {
+      id: tx.id.startsWith("local-") ? undefined : tx.id,
+      user_id: userId,
+      account_id: tx.account_id,
+      category_id: tx.category_id,
+      type: tx.type,
+      amount_cents: tx.amount_cents,
+      currency_code: tx.currency_code,
+      transaction_date: tx.transaction_date,
+      description: tx.description,
+      tags: tx.tags,
+      client_id: tx.client_id,
+    },
+    { onConflict: "user_id,client_id" }
+  );
+}
+
+async function deleteRemoteTransaction(
+  userId: string,
+  clientId: string
+): Promise<void> {
+  const supabase = createClient();
+  await supabase
+    .from("transactions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("client_id", clientId);
+}
+
+async function loadLocalTransactions(
+  userId: string
+): Promise<LocalTransaction[]> {
+  return sortTransactions(await getLocalTransactions(userId));
+}
+
+async function bootstrapTransactions(
+  userId: string
+): Promise<LocalTransaction[]> {
+  const local = await loadLocalTransactions(userId);
+  if (local.length > 0 || !navigator.onLine) {
+    return local;
+  }
+
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("transaction_date", { ascending: false })
+    .limit(500);
+
+  if (data?.length) {
+    await mergeRemoteTransactions(data);
+    return loadLocalTransactions(userId);
+  }
+
+  return local;
+}
 
 export function useTransactions(userId: string | undefined) {
   const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const loading = Boolean(userId) && dataLoading;
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
-
-    const local = await getLocalTransactions(userId);
-
-    if (navigator.onLine) {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("transaction_date", { ascending: false })
-        .limit(500);
-
-      if (data?.length) {
-        const merged = new Map<string, LocalTransaction>();
-        for (const t of data) merged.set(t.client_id, { ...t, _syncStatus: "synced" });
-        for (const t of local) {
-          const existing = merged.get(t.client_id);
-          if (
-            !existing ||
-            new Date(t.updated_at) > new Date(existing.updated_at)
-          ) {
-            merged.set(t.client_id, t);
-          }
-        }
-        setTransactions(
-          Array.from(merged.values()).sort((a, b) =>
-            b.transaction_date.localeCompare(a.transaction_date)
-          )
-        );
-        setLoading(false);
-        return;
-      }
-    }
-
-    setTransactions(local);
-    setLoading(false);
+    setDataLoading(true);
+    const data = await loadLocalTransactions(userId);
+    setTransactions(data);
+    setDataLoading(false);
   }, [userId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   useEffect(() => {
     if (!userId) return;
-    return startAutoSync(userId);
+    let cancelled = false;
+
+    void bootstrapTransactions(userId).then((data) => {
+      if (!cancelled) {
+        setTransactions(data);
+        setDataLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
-  const addTransaction = async (input: {
-    account_id: string;
-    category_id: string | null;
-    type: TransactionType;
-    amount_cents: number;
-    currency_code: string;
-    transaction_date: string;
-    description?: string;
-  }) => {
+  useEffect(() => {
+    if (!userId) return;
+
+    return onSyncComplete(() => {
+      void loadLocalTransactions(userId).then(setTransactions);
+    });
+  }, [userId]);
+
+  const addTransaction = async (input: TransactionInput) => {
     if (!userId) throw new Error("No autenticado");
 
     const client_id = uuidv4();
@@ -94,26 +155,76 @@ export function useTransactions(userId: string | undefined) {
     };
 
     await saveLocalTransaction(tx);
-    setTransactions((prev) => [tx, ...prev]);
+    setTransactions((prev) => sortTransactions([tx, ...prev]));
 
     if (navigator.onLine) {
-      const supabase = createClient();
-      await supabase.from("transactions").upsert({
-        user_id: userId,
-        account_id: tx.account_id,
-        category_id: tx.category_id,
-        type: tx.type,
-        amount_cents: tx.amount_cents,
-        currency_code: tx.currency_code,
-        transaction_date: tx.transaction_date,
-        description: tx.description,
-        tags: tx.tags,
-        client_id: tx.client_id,
-      });
+      await upsertRemoteTransaction(userId, tx);
     }
 
     return tx;
   };
 
-  return { transactions, loading, refresh, addTransaction };
+  const editTransaction = async (
+    clientId: string,
+    input: TransactionInput
+  ) => {
+    if (!userId) throw new Error("No autenticado");
+
+    const existing = transactions.find((t) => t.client_id === clientId);
+    if (!existing) throw new Error("Movimiento no encontrado");
+
+    const tx: LocalTransaction = {
+      ...existing,
+      account_id: input.account_id,
+      category_id: input.category_id,
+      type: input.type,
+      amount_cents: input.amount_cents,
+      currency_code: input.currency_code,
+      transaction_date: input.transaction_date,
+      description: input.description ?? null,
+      updated_at: new Date().toISOString(),
+      _syncStatus: "pending",
+    };
+
+    await updateLocalTransaction(tx);
+    setTransactions((prev) =>
+      sortTransactions(prev.map((t) => (t.client_id === clientId ? tx : t)))
+    );
+
+    if (navigator.onLine) {
+      await upsertRemoteTransaction(userId, tx);
+    }
+
+    return tx;
+  };
+
+  const removeTransaction = async (clientId: string) => {
+    if (!userId) throw new Error("No autenticado");
+
+    const existing = transactions.find((t) => t.client_id === clientId);
+    if (!existing) throw new Error("Movimiento no encontrado");
+
+    await deleteLocalTransaction(existing);
+    setTransactions((prev) => prev.filter((t) => t.client_id !== clientId));
+
+    if (navigator.onLine) {
+      await deleteRemoteTransaction(userId, clientId);
+    }
+  };
+
+  const getTransactionByClientId = useCallback(
+    (clientId: string) =>
+      transactions.find((t) => t.client_id === clientId) ?? null,
+    [transactions]
+  );
+
+  return {
+    transactions: userId ? transactions : [],
+    loading,
+    refresh,
+    addTransaction,
+    editTransaction,
+    removeTransaction,
+    getTransactionByClientId,
+  };
 }

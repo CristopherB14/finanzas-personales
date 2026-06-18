@@ -22,8 +22,6 @@ import {
   totalBalanceFromTransactions,
   transactionCountByAccount,
 } from "@/lib/data/accounts";
-import { ensureUserSetup } from "@/lib/data/seed-user";
-import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -32,10 +30,6 @@ export default function DashboardPage() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-
-  useEffect(() => {
-    if (user?.id) void ensureUserSetup(user.id);
-  }, [user?.id]);
 
   if (userLoading || txLoading) {
     return <p className="text-slate-500">Cargando tu resumen…</p>;
