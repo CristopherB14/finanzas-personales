@@ -9,8 +9,8 @@ import { useCategories } from "@/hooks/use-categories";
 export default function NuevoGastoPage() {
   const { user } = useUser();
   const { transactions, addTransaction } = useTransactions(user?.id);
-  const { accounts } = useAccounts(user?.id);
-  const { expenseCategories, loading } = useCategories(user?.id, transactions);
+  const { accounts, addAccount } = useAccounts(user?.id);
+  const { expenseCategories, loading, addCategory } = useCategories(user?.id, transactions);
 
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
@@ -28,6 +28,8 @@ export default function NuevoGastoPage() {
       onSubmit={async (data) => {
         await addTransaction(data);
       }}
+      onCreateAccount={addAccount}
+      onCreateCategory={(data) => addCategory(data)}
     />
   );
 }

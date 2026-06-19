@@ -19,8 +19,8 @@ export default function EditarIngresoPage({
   const { user } = useUser();
   const { transactions, loading, editTransaction, removeTransaction, getTransactionByClientId } =
     useTransactions(user?.id);
-  const { accounts } = useAccounts(user?.id);
-  const { incomeCategories } = useCategories(user?.id, transactions);
+  const { accounts, addAccount } = useAccounts(user?.id);
+  const { incomeCategories, addCategory } = useCategories(user?.id, transactions);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const transaction = getTransactionByClientId(clientId);
@@ -55,6 +55,8 @@ export default function EditarIngresoPage({
       onSubmit={async (data) => {
         await editTransaction(clientId, data);
       }}
+      onCreateAccount={addAccount}
+      onCreateCategory={(data) => addCategory(data)}
       onDelete={async () => {
         setDeleteError(null);
         try {

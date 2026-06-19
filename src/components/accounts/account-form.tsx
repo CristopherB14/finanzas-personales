@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface AccountFormProps {
   mode: "create" | "edit";
+  variant?: "page" | "embedded";
   initial?: Account;
   onSubmit: (data: {
     name: string;
@@ -20,14 +21,19 @@ interface AccountFormProps {
     icon?: string;
     color?: string;
   }) => Promise<void>;
+  onSuccess?: () => void;
+  onCancel?: () => void;
   onDelete?: () => Promise<void>;
   deleteError?: string | null;
 }
 
 export function AccountForm({
   mode,
+  variant = "page",
   initial,
   onSubmit,
+  onSuccess,
+  onCancel,
   onDelete,
   deleteError,
 }: AccountFormProps) {
@@ -54,8 +60,12 @@ export function AccountForm({
         icon: selectedOption?.icon,
         color: selectedOption?.color,
       });
-      router.push("/cuentas");
-      router.refresh();
+      if (variant === "embedded") {
+        onSuccess?.();
+      } else {
+        router.push("/cuentas");
+        router.refresh();
+      }
     } finally {
       setSaving(false);
     }
@@ -72,8 +82,11 @@ export function AccountForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-5">
-      <h1 className="text-2xl font-bold">{title}</h1>
+    <form
+      onSubmit={handleSubmit}
+      className={variant === "embedded" ? "space-y-5" : "mx-auto max-w-lg space-y-5"}
+    >
+      {variant === "page" && <h1 className="text-2xl font-bold">{title}</h1>}
 
       <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
@@ -124,11 +137,34 @@ export function AccountForm({
         </div>
       </div>
 
-      <Button type="submit" className="w-full" size="lg" disabled={saving}>
-        {saving ? "Guardando…" : mode === "create" ? "Crear cuenta" : "Guardar cambios"}
-      </Button>
+      <div className={variant === "embedded" ? "flex gap-2" : undefined}>
+        {variant === "embedded" && onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            size="lg"
+            disabled={saving}
+            onClick={onCancel}
+          >
+            Cancelar
+          </Button>
+        )}
+        <Button
+          type="submit"
+          className={variant === "embedded" ? "flex-1" : "w-full"}
+          size="lg"
+          disabled={saving}
+        >
+          {saving
+            ? "Guardando…"
+            : mode === "create"
+              ? "Crear cuenta"
+              : "Guardar cambios"}
+        </Button>
+      </div>
 
-      {mode === "edit" && onDelete && (
+      {variant === "page" && mode === "edit" && onDelete && (
         <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
           {deleteError && (
             <p className="text-sm text-red-600">{deleteError}</p>
