@@ -3,10 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createCategory,
+  createSubcategory,
   deleteCategory,
+  deleteSubcategory,
   fetchCategories,
   updateCategory,
+  updateSubcategory,
 } from "@/lib/data/categories";
+import {
+  getSubcategories,
+  getTopLevelCategories,
+} from "@/lib/categories/helpers";
 import type { Category, CategoryType, Transaction } from "@/types/database";
 
 export function useCategories(
@@ -40,6 +47,12 @@ export function useCategories(
     };
   }, [userId]);
 
+  const sortCategories = (items: Category[]) =>
+    [...items].sort((a, b) => {
+      if (a.type !== b.type) return a.type.localeCompare(b.type);
+      return a.sort_order - b.sort_order;
+    });
+
   const addCategory = async (input: {
     name: string;
     type: CategoryType;
@@ -48,13 +61,18 @@ export function useCategories(
   }) => {
     if (!userId) throw new Error("No autenticado");
     const category = await createCategory(userId, input);
-    setCategories((prev) =>
-      [...prev, category].sort((a, b) => {
-        if (a.type !== b.type) return a.type.localeCompare(b.type);
-        return a.sort_order - b.sort_order;
-      })
-    );
+    setCategories((prev) => sortCategories([...prev, category]));
     return category;
+  };
+
+  const addSubcategory = async (
+    parentId: string,
+    input: { name: string; icon?: string; color?: string }
+  ) => {
+    if (!userId) throw new Error("No autenticado");
+    const subcategory = await createSubcategory(userId, parentId, input);
+    setCategories((prev) => sortCategories([...prev, subcategory]));
+    return subcategory;
   };
 
   const editCategory = async (
@@ -69,21 +87,55 @@ export function useCategories(
     return category;
   };
 
+  const editSubcategory = async (
+    subcategoryId: string,
+    input: { name: string; icon?: string; color?: string }
+  ) => {
+    if (!userId) throw new Error("No autenticado");
+    const subcategory = await updateSubcategory(userId, subcategoryId, input);
+    setCategories((prev) =>
+      prev.map((c) => (c.id === subcategoryId ? subcategory : c))
+    );
+    return subcategory;
+  };
+
   const removeCategory = async (categoryId: string) => {
     if (!userId) throw new Error("No autenticado");
-    const result = await deleteCategory(userId, categoryId, transactions);
+    const result = await deleteCategory(
+      userId,
+      categoryId,
+      transactions,
+      categories
+    );
     if (result.ok) {
       setCategories((prev) => prev.filter((c) => c.id !== categoryId));
     }
     return result;
   };
 
+  const removeSubcategory = async (subcategoryId: string) => {
+    if (!userId) throw new Error("No autenticado");
+    const result = await deleteSubcategory(userId, subcategoryId, transactions);
+    if (result.ok) {
+      setCategories((prev) => prev.filter((c) => c.id !== subcategoryId));
+    }
+    return result;
+  };
+
+  const getSubcategoriesFor = useCallback(
+    (parentId: string) => getSubcategories(categories, parentId),
+    [categories]
+  );
+
   const expenseCategories = useMemo(
-    () => (userId ? categories.filter((c) => c.type === "expense") : []),
+    () =>
+      userId ? getTopLevelCategories(categories, "expense") : [],
     [categories, userId]
   );
+
   const incomeCategories = useMemo(
-    () => (userId ? categories.filter((c) => c.type === "income") : []),
+    () =>
+      userId ? getTopLevelCategories(categories, "income") : [],
     [categories, userId]
   );
 
@@ -91,10 +143,14 @@ export function useCategories(
     categories: userId ? categories : [],
     expenseCategories,
     incomeCategories,
+    getSubcategoriesFor,
     loading,
     refresh,
     addCategory,
+    addSubcategory,
     editCategory,
+    editSubcategory,
     removeCategory,
+    removeSubcategory,
   };
 }

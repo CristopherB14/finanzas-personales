@@ -10,7 +10,14 @@ export default function NuevoGastoPage() {
   const { user } = useUser();
   const { transactions, addTransaction } = useTransactions(user?.id);
   const { accounts, addAccount } = useAccounts(user?.id);
-  const { expenseCategories, loading, addCategory } = useCategories(user?.id, transactions);
+  const {
+    categories,
+    expenseCategories,
+    getSubcategoriesFor,
+    loading,
+    addCategory,
+    addSubcategory,
+  } = useCategories(user?.id, transactions);
 
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
@@ -24,12 +31,15 @@ export default function NuevoGastoPage() {
       type="expense"
       accounts={accounts}
       categories={expenseCategories}
+      allCategories={categories}
+      getSubcategoriesFor={getSubcategoriesFor}
       currency="ARS"
       onSubmit={async (data) => {
         await addTransaction(data);
       }}
       onCreateAccount={addAccount}
       onCreateCategory={(data) => addCategory(data)}
+      onCreateSubcategory={(parentId, data) => addSubcategory(parentId, data)}
     />
   );
 }

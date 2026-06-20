@@ -5,21 +5,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useBudget } from "@/hooks/use-budget";
+import { useCategories } from "@/hooks/use-categories";
+import { sumSubcategoryPercentages } from "@/lib/budget/migration";
 import { formatMoney } from "@/lib/format";
-import { createEmptyCategoryBudgetConfig } from "@/types/budget";
+import {
+  createEmptyCategoryBudgetConfig,
+  createEmptySubcategoryBudgetConfig,
+} from "@/types/budget";
 
 export default function PresupuestoPage() {
   const { user } = useUser();
   const { transactions } = useTransactions(user?.id);
+  const { getSubcategoriesFor } = useCategories(user?.id, transactions);
   const {
     categories,
+    allCategories,
     settings,
     limits,
+    subcategoryLimitsByCategory,
     spentByCategory,
+    spentByCategoryId,
     monthlyIncomeCents,
     hasPercentageCategories,
     loading,
     updateCategoryBudget,
+    updateSubcategoryBudget,
   } = useBudget(user?.id, transactions);
 
   if (loading) {
@@ -31,8 +41,8 @@ export default function PresupuestoPage() {
       <header>
         <h1 className="text-2xl font-bold">Presupuesto</h1>
         <p className="text-sm text-slate-500">
-          Configurá cuánto querés gastar por categoría y compará con lo que ya
-          gastaste este mes.
+          Configurá cuánto querés gastar por categoría y repartí el presupuesto
+          entre subcategorías.
         </p>
       </header>
 
@@ -56,7 +66,20 @@ export default function PresupuestoPage() {
       <div className="space-y-3">
         {categories.map((category) => {
           const config =
-            settings?.categories[category.id] ?? createEmptyCategoryBudgetConfig();
+            settings?.categories[category.id] ??
+            createEmptyCategoryBudgetConfig();
+          const subcategories = getSubcategoriesFor(category.id);
+          const subcategoryConfigs: Record<string, ReturnType<typeof createEmptySubcategoryBudgetConfig>> = {};
+
+          for (const sub of subcategories) {
+            subcategoryConfigs[sub.id] =
+              settings?.subcategories[sub.id] ??
+              createEmptySubcategoryBudgetConfig();
+          }
+
+          const percentageTotal = settings
+            ? sumSubcategoryPercentages(settings, allCategories, category.id)
+            : 0;
 
           return (
             <BudgetCategoryCard
@@ -66,8 +89,18 @@ export default function PresupuestoPage() {
               limitCents={limits[category.id] ?? 0}
               spentCents={spentByCategory[category.id] ?? 0}
               monthlyIncomeCents={monthlyIncomeCents}
+              subcategories={subcategories}
+              subcategoryConfigs={subcategoryConfigs}
+              subcategoryLimits={
+                subcategoryLimitsByCategory[category.id] ?? {}
+              }
+              spentBySubcategory={spentByCategoryId}
+              subcategoryPercentageTotal={percentageTotal}
               onUpdate={(nextConfig) =>
                 void updateCategoryBudget(category.id, nextConfig)
+              }
+              onUpdateSubcategory={(subcategoryId, nextConfig) =>
+                void updateSubcategoryBudget(subcategoryId, nextConfig)
               }
             />
           );

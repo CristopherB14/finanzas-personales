@@ -4,45 +4,61 @@ import {
   createLegacyBudgetSettings,
   fillMissingBudgetCategories,
 } from "@/lib/budget/migration";
+import { isSubcategory } from "@/lib/categories/helpers";
 import type { Category } from "@/types/database";
 import {
   BUDGET_PREFERENCES_KEY,
   type BudgetSettings,
   type CategoryBudgetConfig,
+  type SubcategoryBudgetConfig,
+  createEmptyBudgetSettings,
 } from "@/types/budget";
+
+function parseBudgetConfig(value: unknown): CategoryBudgetConfig | null {
+  if (!value || typeof value !== "object") return null;
+  const config = value as Record<string, unknown>;
+  const mode = config.mode === "percentage" ? "percentage" : "fixed";
+  return {
+    mode,
+    fixedCents:
+      typeof config.fixedCents === "number" && config.fixedCents >= 0
+        ? config.fixedCents
+        : 0,
+    percentage:
+      typeof config.percentage === "number" &&
+      config.percentage >= 0 &&
+      config.percentage <= 100
+        ? config.percentage
+        : 0,
+  };
+}
 
 function parseBudgetSettings(value: unknown): BudgetSettings | null {
   if (!value || typeof value !== "object") return null;
 
   const record = value as Record<string, unknown>;
-  if (record.version !== 1 || typeof record.categories !== "object") return null;
-
-  const rawCategories = record.categories;
-  if (!rawCategories || typeof rawCategories !== "object") return null;
+  if (record.version !== 1 && record.version !== 2) return null;
+  if (typeof record.categories !== "object" || !record.categories) return null;
 
   const categories: BudgetSettings["categories"] = {};
   for (const [categoryId, rawConfig] of Object.entries(
-    rawCategories as Record<string, unknown>
+    record.categories as Record<string, unknown>
   )) {
-    if (!rawConfig || typeof rawConfig !== "object") continue;
-    const config = rawConfig as Record<string, unknown>;
-    const mode = config.mode === "percentage" ? "percentage" : "fixed";
-    categories[categoryId] = {
-      mode,
-      fixedCents:
-        typeof config.fixedCents === "number" && config.fixedCents >= 0
-          ? config.fixedCents
-          : 0,
-      percentage:
-        typeof config.percentage === "number" &&
-        config.percentage >= 0 &&
-        config.percentage <= 100
-          ? config.percentage
-          : 0,
-    };
+    const config = parseBudgetConfig(rawConfig);
+    if (config) categories[categoryId] = config;
   }
 
-  return { version: 1, categories };
+  const subcategories: BudgetSettings["subcategories"] = {};
+  if (record.version === 2 && typeof record.subcategories === "object") {
+    for (const [subcategoryId, rawConfig] of Object.entries(
+      record.subcategories as Record<string, unknown>
+    )) {
+      const config = parseBudgetConfig(rawConfig);
+      if (config) subcategories[subcategoryId] = config;
+    }
+  }
+
+  return { version: 2, categories, subcategories };
 }
 
 async function fetchProfilePreferences(
@@ -126,10 +142,15 @@ export async function ensureBudgetSettings(
   year: number,
   month: number
 ): Promise<BudgetSettings> {
+  const topLevel = categories.filter((c) => !isSubcategory(c));
   const existing = await fetchBudgetSettings(userId);
+
   if (existing && Object.keys(existing.categories).length > 0) {
     const filled = fillMissingBudgetCategories(existing, categories);
-    if (filled.categories !== existing.categories) {
+    if (
+      filled.categories !== existing.categories ||
+      filled.subcategories !== existing.subcategories
+    ) {
       await saveBudgetSettings(userId, filled);
     }
     return filled;
@@ -137,12 +158,12 @@ export async function ensureBudgetSettings(
 
   const legacyLines = await fetchLegacyBudgetLines(userId, year, month);
   if (legacyLines) {
-    const migrated = budgetSettingsFromFixedLimits(legacyLines, categories);
+    const migrated = budgetSettingsFromFixedLimits(legacyLines, topLevel);
     await saveBudgetSettings(userId, migrated);
     return migrated;
   }
 
-  const legacyDefaults = createLegacyBudgetSettings(categories);
+  const legacyDefaults = createLegacyBudgetSettings(topLevel);
   await saveBudgetSettings(userId, legacyDefaults);
   return legacyDefaults;
 }
@@ -154,13 +175,53 @@ export async function updateCategoryBudgetConfig(
   config: CategoryBudgetConfig
 ): Promise<BudgetSettings> {
   const next: BudgetSettings = {
-    version: 1,
+    version: 2,
     categories: {
       ...settings.categories,
       [categoryId]: config,
+    },
+    subcategories: settings.subcategories,
+  };
+
+  await saveBudgetSettings(userId, next);
+  return next;
+}
+
+export async function updateSubcategoryBudgetConfig(
+  userId: string,
+  settings: BudgetSettings,
+  subcategoryId: string,
+  config: SubcategoryBudgetConfig
+): Promise<BudgetSettings> {
+  const next: BudgetSettings = {
+    version: 2,
+    categories: settings.categories,
+    subcategories: {
+      ...settings.subcategories,
+      [subcategoryId]: config,
     },
   };
 
   await saveBudgetSettings(userId, next);
   return next;
 }
+
+export async function removeSubcategoryBudgetConfig(
+  userId: string,
+  settings: BudgetSettings,
+  subcategoryId: string
+): Promise<BudgetSettings> {
+  const subcategories = { ...settings.subcategories };
+  delete subcategories[subcategoryId];
+
+  const next: BudgetSettings = {
+    version: 2,
+    categories: settings.categories,
+    subcategories,
+  };
+
+  await saveBudgetSettings(userId, next);
+  return next;
+}
+
+export { createEmptyBudgetSettings };

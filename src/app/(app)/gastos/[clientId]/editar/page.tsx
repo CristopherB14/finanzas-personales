@@ -20,7 +20,13 @@ export default function EditarGastoPage({
   const { transactions, loading, editTransaction, removeTransaction, getTransactionByClientId } =
     useTransactions(user?.id);
   const { accounts, addAccount } = useAccounts(user?.id);
-  const { expenseCategories, addCategory } = useCategories(user?.id, transactions);
+  const {
+    categories,
+    expenseCategories,
+    getSubcategoriesFor,
+    addCategory,
+    addSubcategory,
+  } = useCategories(user?.id, transactions);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const transaction = getTransactionByClientId(clientId);
@@ -50,6 +56,8 @@ export default function EditarGastoPage({
       initial={transaction}
       accounts={accounts}
       categories={expenseCategories}
+      allCategories={categories}
+      getSubcategoriesFor={getSubcategoriesFor}
       currency={transaction.currency_code}
       deleteError={deleteError}
       onSubmit={async (data) => {
@@ -57,6 +65,7 @@ export default function EditarGastoPage({
       }}
       onCreateAccount={addAccount}
       onCreateCategory={(data) => addCategory(data)}
+      onCreateSubcategory={(parentId, data) => addSubcategory(parentId, data)}
       onDelete={async () => {
         setDeleteError(null);
         try {

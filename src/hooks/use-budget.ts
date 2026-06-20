@@ -3,16 +3,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ensureBudgetSettings,
+  removeSubcategoryBudgetConfig,
   updateCategoryBudgetConfig,
+  updateSubcategoryBudgetConfig,
 } from "@/lib/data/budgets";
 import { fetchCategories } from "@/lib/data/categories";
+import { sumSubcategoryPercentages } from "@/lib/budget/migration";
+import { getSubcategories } from "@/lib/categories/helpers";
 import {
   computeBudgetLimits,
+  computeCategorySpentCents,
+  computeSpentByCategoryId,
+  computeSubcategoryBudgetLimits,
   filterByMonth,
   summarizeMonth,
 } from "@/lib/finance/calculations";
 import type { Category, Transaction } from "@/types/database";
-import type { BudgetSettings, CategoryBudgetConfig } from "@/types/budget";
+import type {
+  BudgetSettings,
+  CategoryBudgetConfig,
+  SubcategoryBudgetConfig,
+} from "@/types/budget";
 
 export function useBudget(
   userId: string | undefined,
@@ -74,20 +85,55 @@ export function useBudget(
     [monthTransactions]
   );
 
+  const topLevelCategories = useMemo(
+    () => categories.filter((c) => c.parent_id === null),
+    [categories]
+  );
+
   const limits = useMemo(() => {
     if (!settings) return {};
     return computeBudgetLimits(settings.categories, monthlyIncomeCents);
   }, [settings, monthlyIncomeCents]);
 
+  const subcategoryLimitsByCategory = useMemo(() => {
+    if (!settings) return {};
+
+    const map: Record<string, Record<string, number>> = {};
+    for (const category of topLevelCategories) {
+      const categoryLimit = limits[category.id] ?? 0;
+      const subcategories = getSubcategories(categories, category.id);
+      const configs: Record<string, SubcategoryBudgetConfig> = {};
+
+      for (const sub of subcategories) {
+        const config = settings.subcategories[sub.id];
+        if (config) configs[sub.id] = config;
+      }
+
+      map[category.id] = computeSubcategoryBudgetLimits(
+        configs,
+        categoryLimit
+      );
+    }
+
+    return map;
+  }, [settings, limits, topLevelCategories, categories]);
+
+  const spentByCategoryId = useMemo(
+    () => computeSpentByCategoryId(monthTransactions, "expense"),
+    [monthTransactions]
+  );
+
   const spentByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const transaction of monthTransactions) {
-      if (transaction.type !== "expense" || !transaction.category_id) continue;
-      map[transaction.category_id] =
-        (map[transaction.category_id] ?? 0) + transaction.amount_cents;
+    for (const category of topLevelCategories) {
+      map[category.id] = computeCategorySpentCents(
+        category.id,
+        categories,
+        spentByCategoryId
+      );
     }
     return map;
-  }, [monthTransactions]);
+  }, [topLevelCategories, categories, spentByCategoryId]);
 
   const hasPercentageCategories = useMemo(() => {
     if (!settings) return false;
@@ -103,8 +149,9 @@ export function useBudget(
       setSettings((prev) =>
         prev
           ? {
-              version: 1,
+              version: 2,
               categories: { ...prev.categories, [categoryId]: config },
+              subcategories: prev.subcategories,
             }
           : prev
       );
@@ -120,15 +167,77 @@ export function useBudget(
     [settings, userId]
   );
 
+  const updateSubcategoryBudget = useCallback(
+    async (subcategoryId: string, config: SubcategoryBudgetConfig) => {
+      if (!userId || !settings) return;
+
+      const subcategory = categories.find((c) => c.id === subcategoryId);
+      if (!subcategory?.parent_id) return;
+
+      const nextSettings: BudgetSettings = {
+        version: 2,
+        categories: settings.categories,
+        subcategories: {
+          ...settings.subcategories,
+          [subcategoryId]: config,
+        },
+      };
+
+      const total = sumSubcategoryPercentages(
+        nextSettings,
+        categories,
+        subcategory.parent_id
+      );
+      if (total > 100) return;
+
+      setSettings(nextSettings);
+
+      const next = await updateSubcategoryBudgetConfig(
+        userId,
+        settings,
+        subcategoryId,
+        config
+      );
+      setSettings(next);
+    },
+    [settings, userId, categories]
+  );
+
+  const removeSubcategoryBudget = useCallback(
+    async (subcategoryId: string) => {
+      if (!userId || !settings) return;
+
+      setSettings((prev) => {
+        if (!prev) return prev;
+        const subcategories = { ...prev.subcategories };
+        delete subcategories[subcategoryId];
+        return { version: 2, categories: prev.categories, subcategories };
+      });
+
+      const next = await removeSubcategoryBudgetConfig(
+        userId,
+        settings,
+        subcategoryId
+      );
+      setSettings(next);
+    },
+    [settings, userId]
+  );
+
   return {
-    categories: userId ? categories : [],
+    categories: userId ? topLevelCategories : [],
+    allCategories: userId ? categories : [],
     settings: userId ? settings : null,
     limits,
+    subcategoryLimitsByCategory,
     spentByCategory,
+    spentByCategoryId,
     monthlyIncomeCents,
     hasPercentageCategories,
     loading,
     refresh,
     updateCategoryBudget,
+    updateSubcategoryBudget,
+    removeSubcategoryBudget,
   };
 }

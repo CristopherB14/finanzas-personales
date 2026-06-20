@@ -1,5 +1,9 @@
-import type { CategoryBudgetConfig } from "@/types/budget";
-import type { Transaction } from "@/types/database";
+import type {
+  CategoryBudgetConfig,
+  SubcategoryBudgetConfig,
+} from "@/types/budget";
+import type { Category, Transaction } from "@/types/database";
+import { getSubcategories, isSubcategory } from "@/lib/categories/helpers";
 import {
   endOfMonth,
   format,
@@ -160,6 +164,69 @@ export function computeBudgetLimits(
     limits[categoryId] = resolveCategoryBudgetLimit(config, monthlyIncomeCents);
   }
   return limits;
+}
+
+export function resolveSubcategoryBudgetLimit(
+  config: SubcategoryBudgetConfig | undefined,
+  categoryLimitCents: number
+): number {
+  if (!config) return 0;
+
+  if (config.mode === "percentage") {
+    if (categoryLimitCents <= 0 || config.percentage <= 0) return 0;
+    return Math.round((categoryLimitCents * config.percentage) / 100);
+  }
+
+  return Math.max(0, config.fixedCents);
+}
+
+export function computeSubcategoryBudgetLimits(
+  subcategoryConfigs: Record<string, SubcategoryBudgetConfig>,
+  categoryLimitCents: number
+): Record<string, number> {
+  const limits: Record<string, number> = {};
+  for (const [subcategoryId, config] of Object.entries(subcategoryConfigs)) {
+    limits[subcategoryId] = resolveSubcategoryBudgetLimit(
+      config,
+      categoryLimitCents
+    );
+  }
+  return limits;
+}
+
+export function computeSpentByCategoryId(
+  transactions: Transaction[],
+  type: "income" | "expense"
+): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const transaction of transactions) {
+    if (transaction.type !== type || !transaction.category_id) continue;
+    map[transaction.category_id] =
+      (map[transaction.category_id] ?? 0) + transaction.amount_cents;
+  }
+  return map;
+}
+
+export function computeCategorySpentCents(
+  categoryId: string,
+  categories: Category[],
+  spentByCategoryId: Record<string, number>
+): number {
+  let total = spentByCategoryId[categoryId] ?? 0;
+
+  for (const sub of getSubcategories(categories, categoryId)) {
+    total += spentByCategoryId[sub.id] ?? 0;
+  }
+
+  return total;
+}
+
+export function isLegacyCategoryTransaction(
+  categoryId: string,
+  categories: Category[]
+): boolean {
+  const category = categories.find((c) => c.id === categoryId);
+  return Boolean(category && !isSubcategory(category));
 }
 
 export function budgetUsagePercent(

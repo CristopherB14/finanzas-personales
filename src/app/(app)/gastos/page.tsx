@@ -11,22 +11,21 @@ import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
+import { formatCategoryLabel } from "@/lib/categories/helpers";
 import { formatMoney } from "@/lib/format";
 
 export default function GastosPage() {
   const { user } = useUser();
   const { transactions, loading } = useTransactions(user?.id);
   const { accounts } = useAccounts(user?.id);
-  const { expenseCategories } = useCategories(user?.id, transactions);
+  const { categories } = useCategories(user?.id, transactions);
 
   const accountMap = useMemo(
     () => new Map(accounts.map((a) => [a.id, a.name])),
     [accounts]
   );
-  const categoryMap = useMemo(
-    () => new Map(expenseCategories.map((c) => [c.id, c.name])),
-    [expenseCategories]
-  );
+  const categoryLabel = (categoryId: string | null) =>
+    formatCategoryLabel(categories, categoryId);
 
   const gastos = transactions.filter((t) => t.type === "expense");
 
@@ -59,8 +58,8 @@ export default function GastosPage() {
                     {format(new Date(t.transaction_date), "d MMM yyyy", {
                       locale: es,
                     })}
-                    {categoryMap.get(t.category_id ?? "") &&
-                      ` · ${categoryMap.get(t.category_id ?? "")}`}
+                    {categoryLabel(t.category_id) &&
+                      ` · ${categoryLabel(t.category_id)}`}
                     {accountMap.get(t.account_id) &&
                       ` · ${accountMap.get(t.account_id)}`}
                     {t._syncStatus === "pending" && " · Pendiente sync"}

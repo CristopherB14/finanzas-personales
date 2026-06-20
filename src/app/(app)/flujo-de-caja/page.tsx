@@ -11,6 +11,7 @@ import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
+import { formatCategoryLabel } from "@/lib/categories/helpers";
 import { formatMoney } from "@/lib/format";
 import {
   buildCashFlowRows,
@@ -29,10 +30,8 @@ export default function FlujoDeCajaPage() {
     () => new Map(accounts.map((a) => [a.id, a.name])),
     [accounts]
   );
-  const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c.name])),
-    [categories]
-  );
+  const categoryLabel = (categoryId: string | null | undefined) =>
+    formatCategoryLabel(categories, categoryId);
 
   const cashFlowCategories = useMemo(
     () => categories.filter((c) => c.type === "income" || c.type === "expense"),
@@ -208,7 +207,7 @@ export default function FlujoDeCajaPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-500">
                   {transaction.category_id
-                    ? categoryMap.get(transaction.category_id) ?? "—"
+                    ? categoryLabel(transaction.category_id) || "—"
                     : "—"}
                 </td>
                 <td className="px-4 py-3 text-slate-500">
