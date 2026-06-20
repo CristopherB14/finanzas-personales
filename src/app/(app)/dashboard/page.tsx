@@ -93,7 +93,7 @@ export default function DashboardPage() {
       {accounts.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Saldo por cuenta (efectivo)</CardTitle>
+            <CardTitle className="text-base">Saldo por cuenta</CardTitle>
             <Button asChild variant="ghost" size="sm">
               <Link href="/cuentas">Ver todas</Link>
             </Button>
