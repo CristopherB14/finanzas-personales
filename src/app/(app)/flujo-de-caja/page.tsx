@@ -125,6 +125,7 @@ export default function FlujoDeCajaPage() {
               <option value="income">Ingresos</option>
               <option value="expense">Gastos</option>
               <option value="investment">Inversiones</option>
+              <option value="transfer">Transferencias</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -229,7 +230,9 @@ export default function FlujoDeCajaPage() {
                         ? "Gasto"
                         : transaction.type === "investment"
                           ? "Inversión"
-                          : "Ingreso")}
+                          : transaction.type === "transfer"
+                            ? "Transferencia"
+                            : "Ingreso")}
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-500">
@@ -238,16 +241,28 @@ export default function FlujoDeCajaPage() {
                     : "—"}
                 </td>
                 <td className="px-4 py-3 text-slate-500">
-                  {accountMap.get(transaction.account_id) ?? "—"}
+                  {transaction.type === "transfer" && transaction.to_account_id
+                    ? `${accountMap.get(transaction.account_id) ?? "—"} → ${accountMap.get(transaction.to_account_id) ?? "—"}`
+                    : (accountMap.get(transaction.account_id) ?? "—")}
                 </td>
                 <td
                   className={cn(
                     "px-4 py-3 text-right font-medium tabular-nums",
-                    deltaCents >= 0 ? "text-emerald-600" : "text-red-600"
+                    transaction.type === "transfer"
+                      ? "text-sky-700 dark:text-sky-400"
+                      : deltaCents >= 0
+                        ? "text-emerald-600"
+                        : "text-red-600"
                   )}
                 >
-                  {deltaCents >= 0 ? "+" : "−"}
-                  {formatMoney(Math.abs(deltaCents), transaction.currency_code)}
+                  {transaction.type === "transfer" ? (
+                    formatMoney(transaction.amount_cents, transaction.currency_code)
+                  ) : (
+                    <>
+                      {deltaCents >= 0 ? "+" : "−"}
+                      {formatMoney(Math.abs(deltaCents), transaction.currency_code)}
+                    </>
+                  )}
                 </td>
                 <td
                   className={cn(

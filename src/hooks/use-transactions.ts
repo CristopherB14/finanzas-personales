@@ -20,6 +20,7 @@ import type { LocalTransaction, TransactionType } from "@/types/database";
 
 export type TransactionInput = {
   account_id: string;
+  to_account_id?: string;
   category_id: string | null;
   type: TransactionType;
   amount_cents: number;
@@ -66,6 +67,7 @@ async function upsertRemoteTransaction(
       id: tx.id.startsWith("local-") ? undefined : tx.id,
       user_id: userId,
       account_id: tx.account_id,
+      to_account_id: tx.to_account_id ?? null,
       category_id: tx.category_id,
       investment_asset_id: tx.investment_asset_id ?? null,
       type: tx.type,
@@ -187,7 +189,9 @@ export function useTransactions(userId: string | undefined) {
       user_id: userId,
       client_id,
       account_id: input.account_id,
-      category_id: input.category_id,
+      to_account_id:
+        input.type === "transfer" ? (input.to_account_id ?? null) : null,
+      category_id: input.type === "transfer" ? null : input.category_id,
       investment_asset_id,
       type: input.type,
       amount_cents: input.amount_cents,
@@ -237,7 +241,9 @@ export function useTransactions(userId: string | undefined) {
     const tx: LocalTransaction = {
       ...existing,
       account_id: input.account_id,
-      category_id: input.category_id,
+      to_account_id:
+        input.type === "transfer" ? (input.to_account_id ?? null) : null,
+      category_id: input.type === "transfer" ? null : input.category_id,
       investment_asset_id,
       type: input.type,
       amount_cents: input.amount_cents,

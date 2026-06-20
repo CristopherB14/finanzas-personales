@@ -107,14 +107,23 @@ export async function getTransactionCountByAccount(
   accountId: string
 ): Promise<number> {
   const supabase = createClient();
-  const { count, error } = await supabase
-    .from("transactions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("account_id", accountId);
+  const [{ count: sourceCount, error: sourceError }, { count: destCount, error: destError }] =
+    await Promise.all([
+      supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("account_id", accountId),
+      supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("to_account_id", accountId),
+    ]);
 
-  if (error) throw error;
-  return count ?? 0;
+  if (sourceError) throw sourceError;
+  if (destError) throw destError;
+  return (sourceCount ?? 0) + (destCount ?? 0);
 }
 
 export async function migrateOrphanTransactions(userId: string): Promise<void> {
@@ -196,12 +205,25 @@ function transactionDeltaForAccount(
   return 0;
 }
 
+function transferDeltaForAccount(
+  transaction: Transaction,
+  accountId: string
+): number {
+  if (transaction.type !== "transfer" || !transaction.to_account_id) return 0;
+  if (transaction.account_id === accountId) return -transaction.amount_cents;
+  if (transaction.to_account_id === accountId) return transaction.amount_cents;
+  return 0;
+}
+
 export function accountBalanceFromTransactions(
   accountId: string,
   transactions: Transaction[],
   accountType: AccountType = "checking"
 ): number {
   return transactions.reduce((sum, t) => {
+    if (t.type === "transfer") {
+      return sum + transferDeltaForAccount(t, accountId);
+    }
     if (t.account_id !== accountId) return sum;
     return sum + transactionDeltaForAccount(t, accountType);
   }, 0);
@@ -211,7 +233,11 @@ export function transactionCountByAccount(
   accountId: string,
   transactions: Transaction[]
 ): number {
-  return transactions.filter((t) => t.account_id === accountId).length;
+  return transactions.filter(
+    (t) =>
+      t.account_id === accountId ||
+      (t.type === "transfer" && t.to_account_id === accountId)
+  ).length;
 }
 
 export function totalCashBalanceFromTransactions(
@@ -221,6 +247,19 @@ export function totalCashBalanceFromTransactions(
   const accountTypeById = new Map(accounts.map((a) => [a.id, a.type]));
 
   return transactions.reduce((sum, t) => {
+    if (t.type === "transfer" && t.to_account_id) {
+      const sourceType = accountTypeById.get(t.account_id);
+      const destinationType = accountTypeById.get(t.to_account_id);
+      let delta = 0;
+      if (sourceType && isCashAccountType(sourceType)) {
+        delta -= t.amount_cents;
+      }
+      if (destinationType && isCashAccountType(destinationType)) {
+        delta += t.amount_cents;
+      }
+      return sum + delta;
+    }
+
     const accountType = accountTypeById.get(t.account_id) ?? "checking";
     if (!isCashAccountType(accountType)) return sum;
     return sum + transactionDeltaForAccount(t, accountType);

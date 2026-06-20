@@ -33,6 +33,14 @@ class FinanzasDB extends Dexie {
       syncQueue: "++id, client_id, created_at",
       meta: "key",
     });
+    this.version(2).stores({
+      transactions:
+        "id, user_id, account_id, to_account_id, category_id, type, transaction_date, client_id, _syncStatus",
+      accounts: "id, user_id, client_id",
+      categories: "id, user_id, type, client_id",
+      syncQueue: "++id, client_id, created_at",
+      meta: "key",
+    });
   }
 }
 

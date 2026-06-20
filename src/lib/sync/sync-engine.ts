@@ -70,6 +70,7 @@ export async function pushPendingChanges(userId: string): Promise<void> {
         id: tx.id.startsWith("local-") ? undefined : tx.id,
         user_id: userId,
         account_id: tx.account_id,
+        to_account_id: tx.to_account_id ?? null,
         category_id: tx.category_id,
         investment_asset_id: tx.investment_asset_id ?? null,
         type: tx.type,

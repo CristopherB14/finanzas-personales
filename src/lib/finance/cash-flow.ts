@@ -1,7 +1,12 @@
 import { format, subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import type { Transaction, TransactionType } from "@/types/database";
 
-export type CashFlowTypeFilter = "all" | "income" | "expense" | "investment";
+export type CashFlowTypeFilter =
+  | "all"
+  | "income"
+  | "expense"
+  | "investment"
+  | "transfer";
 
 export interface CashFlowFilters {
   fromDate: string;
@@ -36,15 +41,23 @@ function isCashFlowTransaction(t: Transaction): boolean {
   );
 }
 
+function isTransferTransaction(
+  t: Transaction
+): t is Transaction & { to_account_id: string } {
+  return t.type === "transfer" && Boolean(t.to_account_id);
+}
+
 function matchesTypeFilter(
   transaction: Transaction,
   typeFilter: CashFlowTypeFilter
 ): boolean {
-  if (typeFilter === "all") return true;
+  if (typeFilter === "all") return isCashFlowTransaction(transaction);
+  if (typeFilter === "transfer") return isTransferTransaction(transaction);
   return transaction.type === typeFilter;
 }
 
 function transactionDelta(transaction: Transaction): number {
+  if (transaction.type === "transfer") return 0;
   if (transaction.type === "income") return transaction.amount_cents;
   return -transaction.amount_cents;
 }
@@ -53,7 +66,12 @@ function matchesAccountFilter(
   transaction: Transaction,
   accountId: string
 ): boolean {
-  return !accountId || transaction.account_id === accountId;
+  if (!accountId) return true;
+  if (transaction.account_id === accountId) return true;
+  return (
+    transaction.type === "transfer" &&
+    transaction.to_account_id === accountId
+  );
 }
 
 export function computeOpeningBalance(
@@ -64,7 +82,9 @@ export function computeOpeningBalance(
 
   for (const transaction of transactions) {
     if (!isCashFlowTransaction(transaction)) continue;
-    if (!matchesTypeFilter(transaction, filters.typeFilter)) continue;
+    if (filters.typeFilter !== "all" && filters.typeFilter !== transaction.type) {
+      continue;
+    }
     if (!matchesAccountFilter(transaction, filters.accountId)) continue;
     if (transaction.transaction_date >= filters.fromDate) continue;
 
@@ -79,12 +99,14 @@ export function filterCashFlowTransactions(
   filters: CashFlowFilters
 ): Transaction[] {
   return transactions.filter((transaction) => {
-    if (!isCashFlowTransaction(transaction)) return false;
     if (!matchesTypeFilter(transaction, filters.typeFilter)) return false;
     if (transaction.transaction_date < filters.fromDate) return false;
     if (transaction.transaction_date > filters.toDate) return false;
     if (!matchesAccountFilter(transaction, filters.accountId)) return false;
-    if (filters.categoryId && transaction.category_id !== filters.categoryId) {
+    if (
+      filters.categoryId &&
+      transaction.category_id !== filters.categoryId
+    ) {
       return false;
     }
     return true;
@@ -130,6 +152,8 @@ export function cashFlowEditPath(transaction: Transaction): string {
       return `/ingresos/${transaction.client_id}/editar`;
     case "investment":
       return `/inversiones/${transaction.client_id}/editar`;
+    case "transfer":
+      return `/transferencias/${transaction.client_id}/editar`;
     default:
       return `/gastos/${transaction.client_id}/editar`;
   }

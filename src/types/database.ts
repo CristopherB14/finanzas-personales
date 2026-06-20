@@ -61,6 +61,7 @@ export interface Transaction {
   id: string;
   user_id: string;
   account_id: string;
+  to_account_id?: string | null;
   category_id: string | null;
   investment_asset_id?: string | null;
   type: TransactionType;
