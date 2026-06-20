@@ -22,6 +22,7 @@ interface BudgetCategoryCardProps {
   subcategoryLimits: Record<string, number>;
   spentBySubcategory: Record<string, number>;
   subcategoryPercentageTotal: number;
+  spentLabel?: string;
   onUpdate: (config: CategoryBudgetConfig) => void;
   onUpdateSubcategory: (
     subcategoryId: string,
@@ -40,6 +41,7 @@ export function BudgetCategoryCard({
   subcategoryLimits,
   spentBySubcategory,
   subcategoryPercentageTotal,
+  spentLabel = "gastado",
   onUpdate,
   onUpdateSubcategory,
 }: BudgetCategoryCardProps) {
@@ -77,6 +79,7 @@ export function BudgetCategoryCard({
           name={categoryName}
           limitCents={limitCents}
           spentCents={spentCents}
+          spentLabel={spentLabel}
         />
 
         {subcategories.length > 0 && (
@@ -99,6 +102,7 @@ export function BudgetCategoryCard({
                   config={subConfig}
                   limitCents={subcategoryLimits[sub.id] ?? 0}
                   spentCents={spentBySubcategory[sub.id] ?? 0}
+                  spentLabel={spentLabel}
                   categoryLimitCents={limitCents}
                   categoryName={categoryName}
                   percentageTotal={subcategoryPercentageTotal}

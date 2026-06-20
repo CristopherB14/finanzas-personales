@@ -5,6 +5,10 @@ import {
   MIGRATION_INCOME_CATEGORIES,
 } from "@/lib/categories/migration-defaults";
 import { migrateOrphanTransactions } from "@/lib/data/accounts";
+import {
+  ensureInvestmentCategories,
+  migrateInvestmentCategories,
+} from "@/lib/data/investment-migration";
 
 const setupPromises = new Map<string, Promise<void>>();
 
@@ -40,6 +44,9 @@ async function runUserSetup(userId: string): Promise<void> {
     }));
     await supabase.from("categories").insert([...expenseRows, ...incomeRows]);
   }
+
+  await migrateInvestmentCategories(userId);
+  await ensureInvestmentCategories(userId);
 }
 
 export function ensureUserSetup(userId: string): Promise<void> {

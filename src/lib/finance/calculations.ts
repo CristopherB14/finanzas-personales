@@ -2,8 +2,10 @@ import type {
   CategoryBudgetConfig,
   SubcategoryBudgetConfig,
 } from "@/types/budget";
-import type { Category, Transaction } from "@/types/database";
+import type { Account, Category, Transaction } from "@/types/database";
 import { getSubcategories, isSubcategory } from "@/lib/categories/helpers";
+import { totalCashBalanceFromTransactions } from "@/lib/data/accounts";
+import { totalInvestedCents } from "@/lib/finance/investments";
 import {
   endOfMonth,
   format,
@@ -16,11 +18,14 @@ export type TrafficLight = "green" | "yellow" | "red";
 export interface MonthlySummary {
   incomeCents: number;
   expenseCents: number;
+  investmentCents: number;
   savingsCents: number;
   savingsRate: number;
 }
 
 export interface DashboardMetrics extends MonthlySummary {
+  cashCents: number;
+  investmentAssetsCents: number;
   netWorthCents: number;
   emergencyMonths: number;
   status: TrafficLight;
@@ -42,17 +47,19 @@ export function filterByMonth(
 export function summarizeMonth(transactions: Transaction[]): MonthlySummary {
   let incomeCents = 0;
   let expenseCents = 0;
+  let investmentCents = 0;
 
   for (const t of transactions) {
     if (t.type === "income") incomeCents += t.amount_cents;
     if (t.type === "expense") expenseCents += t.amount_cents;
+    if (t.type === "investment") investmentCents += t.amount_cents;
   }
 
-  const savingsCents = incomeCents - expenseCents;
+  const savingsCents = incomeCents - expenseCents - investmentCents;
   const savingsRate =
     incomeCents > 0 ? (savingsCents / incomeCents) * 100 : 0;
 
-  return { incomeCents, expenseCents, savingsCents, savingsRate };
+  return { incomeCents, expenseCents, investmentCents, savingsCents, savingsRate };
 }
 
 export function savingsTrafficLight(rate: number): TrafficLight {
@@ -84,7 +91,7 @@ export function buildDashboardMetrics(
   transactions: Transaction[],
   year: number,
   month: number,
-  accountBalanceCents: number,
+  accounts: Account[],
   emergencyFundCents?: number
 ): DashboardMetrics {
   const monthTx = filterByMonth(transactions, year, month);
@@ -100,12 +107,18 @@ export function buildDashboardMetrics(
   const avgExpense =
     last3.reduce((a, b) => a + b, 0) / (last3.filter((e) => e > 0).length || 1);
 
-  const fund = emergencyFundCents ?? accountBalanceCents;
+  const cashCents = totalCashBalanceFromTransactions(transactions, accounts);
+  const investmentAssetsCents = totalInvestedCents(transactions);
+  const netWorthCents = cashCents + investmentAssetsCents;
+
+  const fund = emergencyFundCents ?? cashCents;
   const months = emergencyMonths(fund, avgExpense);
 
   return {
     ...summary,
-    netWorthCents: accountBalanceCents,
+    cashCents,
+    investmentAssetsCents,
+    netWorthCents,
     emergencyMonths: months,
     status,
     statusMessage: statusMessage(status),
@@ -196,7 +209,7 @@ export function computeSubcategoryBudgetLimits(
 
 export function computeSpentByCategoryId(
   transactions: Transaction[],
-  type: "income" | "expense"
+  type: "income" | "expense" | "investment"
 ): Record<string, number> {
   const map: Record<string, number> = {};
   for (const transaction of transactions) {

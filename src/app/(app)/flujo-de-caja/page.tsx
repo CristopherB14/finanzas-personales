@@ -15,7 +15,9 @@ import { formatCategoryLabel } from "@/lib/categories/helpers";
 import { formatMoney } from "@/lib/format";
 import {
   buildCashFlowRows,
+  cashFlowEditPath,
   defaultCashFlowFilters,
+  type CashFlowTypeFilter,
 } from "@/lib/finance/cash-flow";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +36,13 @@ export default function FlujoDeCajaPage() {
     formatCategoryLabel(categories, categoryId);
 
   const cashFlowCategories = useMemo(
-    () => categories.filter((c) => c.type === "income" || c.type === "expense"),
+    () =>
+      categories.filter(
+        (c) =>
+          c.type === "income" ||
+          c.type === "expense" ||
+          c.type === "investment"
+      ),
     [categories]
   );
 
@@ -59,7 +67,7 @@ export default function FlujoDeCajaPage() {
       </header>
 
       <Card>
-        <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-2">
             <Label htmlFor="fromDate">Desde</Label>
             <Input
@@ -98,6 +106,25 @@ export default function FlujoDeCajaPage() {
                   {account.name}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="typeFilter">Tipo</Label>
+            <select
+              id="typeFilter"
+              value={filters.typeFilter}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  typeFilter: e.target.value as CashFlowTypeFilter,
+                }))
+              }
+              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="all">Todos</option>
+              <option value="income">Ingresos</option>
+              <option value="expense">Gastos</option>
+              <option value="investment">Inversiones</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -194,15 +221,15 @@ export default function FlujoDeCajaPage() {
                 </td>
                 <td className="px-4 py-3">
                   <Link
-                    href={
-                      transaction.type === "expense"
-                        ? `/gastos/${transaction.client_id}/editar`
-                        : `/ingresos/${transaction.client_id}/editar`
-                    }
+                    href={cashFlowEditPath(transaction)}
                     className="hover:text-emerald-700 hover:underline"
                   >
                     {transaction.description ||
-                      (transaction.type === "expense" ? "Gasto" : "Ingreso")}
+                      (transaction.type === "expense"
+                        ? "Gasto"
+                        : transaction.type === "investment"
+                          ? "Inversión"
+                          : "Ingreso")}
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-500">

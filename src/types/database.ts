@@ -6,9 +6,9 @@ export type AccountType =
   | "investment"
   | "other";
 
-export type CategoryType = "income" | "expense";
+export type CategoryType = "income" | "expense" | "investment";
 
-export type TransactionType = "income" | "expense" | "transfer";
+export type TransactionType = "income" | "expense" | "investment" | "transfer";
 
 export interface Profile {
   id: string;
@@ -45,11 +45,24 @@ export interface Category {
   updated_at: string;
 }
 
+export interface InvestmentAsset {
+  id: string;
+  user_id: string;
+  category_id: string;
+  subcategory_id: string;
+  invested_cents: number;
+  market_value_cents: number | null;
+  currency_code: string;
+  client_id?: string | null;
+  updated_at: string;
+}
+
 export interface Transaction {
   id: string;
   user_id: string;
   account_id: string;
   category_id: string | null;
+  investment_asset_id?: string | null;
   type: TransactionType;
   amount_cents: number;
   currency_code: string;

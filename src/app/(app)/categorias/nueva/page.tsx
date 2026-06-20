@@ -11,7 +11,9 @@ function NuevaCategoriaForm() {
   const searchParams = useSearchParams();
   const type = (searchParams.get("type") === "income"
     ? "income"
-    : "expense") as CategoryType;
+    : searchParams.get("type") === "investment"
+      ? "investment"
+      : "expense") as CategoryType;
   const { user } = useUser();
   const { addCategory } = useCategories(user?.id);
 

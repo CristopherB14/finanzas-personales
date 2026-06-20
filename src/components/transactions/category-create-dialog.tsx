@@ -35,7 +35,11 @@ export function CategoryCreateDialog({
   const createdRef = useRef<Category | null>(null);
 
   const title =
-    type === "expense" ? "Nueva categoría de gasto" : "Nueva categoría de ingreso";
+    type === "expense"
+      ? "Nueva categoría de gasto"
+      : type === "investment"
+        ? "Nueva categoría de inversión"
+        : "Nueva categoría de ingreso";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

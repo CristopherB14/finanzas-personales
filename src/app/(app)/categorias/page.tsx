@@ -21,20 +21,26 @@ export default function CategoriasPage() {
   const {
     expenseCategories,
     incomeCategories,
+    investmentCategories,
     getSubcategoriesFor,
     loading,
     addSubcategory,
     editSubcategory: saveSubcategory,
     removeSubcategory,
   } = useCategories(user?.id, transactions);
-  const [tab, setTab] = useState<"expense" | "income">("expense");
+  const [tab, setTab] = useState<"expense" | "income" | "investment">("expense");
   const [createParent, setCreateParent] = useState<Category | null>(null);
   const [editSubcategory, setEditSubcategory] = useState<{
     parent: Category;
     subcategory: Category;
   } | null>(null);
 
-  const categories = tab === "expense" ? expenseCategories : incomeCategories;
+  const categories =
+    tab === "expense"
+      ? expenseCategories
+      : tab === "income"
+        ? incomeCategories
+        : investmentCategories;
 
   return (
     <div className="space-y-6">
@@ -49,7 +55,7 @@ export default function CategoriasPage() {
       </header>
 
       <div className="flex gap-2">
-        {(["expense", "income"] as const).map((type) => (
+        {(["expense", "income", "investment"] as const).map((type) => (
           <button
             key={type}
             type="button"
@@ -61,7 +67,11 @@ export default function CategoriasPage() {
                 : "bg-slate-100 text-slate-700 dark:bg-slate-800"
             )}
           >
-            {type === "expense" ? "Gastos" : "Ingresos"}
+            {type === "expense"
+              ? "Gastos"
+              : type === "income"
+                ? "Ingresos"
+                : "Inversiones"}
           </button>
         ))}
       </div>
@@ -73,7 +83,12 @@ export default function CategoriasPage() {
           <CardContent className="py-8 text-center">
             <p className="text-slate-600">
               No hay categorías de{" "}
-              {tab === "expense" ? "gastos" : "ingresos"} todavía.
+              {tab === "expense"
+                ? "gastos"
+                : tab === "income"
+                  ? "ingresos"
+                  : "inversiones"}{" "}
+              todavía.
             </p>
             <Button asChild className="mt-4">
               <Link href={`/categorias/nueva?type=${tab}`}>

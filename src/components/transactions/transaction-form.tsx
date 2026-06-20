@@ -12,6 +12,7 @@ import { AccountCreateDialog } from "@/components/transactions/account-create-di
 import { CategoryCreateDialog } from "@/components/transactions/category-create-dialog";
 import { SubcategoryCreateDialog } from "@/components/transactions/subcategory-create-dialog";
 import { resolveTransactionCategorySelection } from "@/lib/categories/helpers";
+import { isCashAccountType } from "@/lib/data/accounts";
 import { parseMoneyInput } from "@/lib/format";
 import type {
   Account,
@@ -24,7 +25,7 @@ import type { TransactionInput } from "@/hooks/use-transactions";
 
 interface TransactionFormProps {
   mode: "create" | "edit";
-  type: "income" | "expense";
+  type: "income" | "expense" | "investment";
   accounts: Account[];
   categories: Category[];
   allCategories: Category[];
@@ -105,6 +106,14 @@ export function TransactionForm({
     [allCategories, initial?.category_id]
   );
 
+  const selectableAccounts = useMemo(
+    () =>
+      type === "investment"
+        ? accounts.filter((a) => isCashAccountType(a.type))
+        : accounts,
+    [accounts, type]
+  );
+
   const [amount, setAmount] = useState(() =>
     initial ? formatAmountInput(initial.amount_cents) : ""
   );
@@ -118,7 +127,7 @@ export function TransactionForm({
     () => initialSelection.subcategoryId
   );
   const [accountId, setAccountId] = useState(
-    () => initial?.account_id ?? accounts[0]?.id ?? ""
+    () => initial?.account_id ?? selectableAccounts[0]?.id ?? ""
   );
   const [date, setDate] = useState(
     () =>
@@ -148,12 +157,28 @@ export function TransactionForm({
     mode === "create"
       ? type === "expense"
         ? "Nuevo gasto"
-        : "Nuevo ingreso"
+        : type === "investment"
+          ? "Nueva inversión"
+          : "Nuevo ingreso"
       : type === "expense"
         ? "Editar gasto"
-        : "Editar ingreso";
+        : type === "investment"
+          ? "Editar inversión"
+          : "Editar ingreso";
 
-  const listPath = type === "expense" ? "/gastos" : "/ingresos";
+  const listPath =
+    type === "expense"
+      ? "/gastos"
+      : type === "investment"
+        ? "/inversiones"
+        : "/ingresos";
+
+  const categoryKindLabel =
+    type === "expense"
+      ? "gasto"
+      : type === "investment"
+        ? "inversión"
+        : "ingreso";
 
   const handleParentCategoryChange = (categoryId: string) => {
     setParentCategoryId(categoryId);
@@ -246,7 +271,9 @@ export function TransactionForm({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <Label>Categoría</Label>
+            <Label>
+              {type === "investment" ? "Categoría de inversión" : "Categoría"}
+            </Label>
             {onCreateCategory && (
               <InlineCreateButton
                 label="Nueva"
@@ -256,8 +283,7 @@ export function TransactionForm({
           </div>
           {categories.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
-              Todavía no tenés categorías de{" "}
-              {type === "expense" ? "gasto" : "ingreso"}.
+              Todavía no tenés categorías de {categoryKindLabel}.
               {onCreateCategory
                 ? ' Tocá "Nueva" para crear una.'
                 : " Creá una desde Categorías."}
@@ -289,7 +315,11 @@ export function TransactionForm({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <Label>Subcategoría</Label>
+            <Label>
+              {type === "investment"
+                ? "Subcategoría de inversión"
+                : "Subcategoría"}
+            </Label>
             {onCreateSubcategory && selectedParent && (
               <InlineCreateButton
                 label="Nueva"
@@ -336,7 +366,9 @@ export function TransactionForm({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="account">Cuenta</Label>
+            <Label htmlFor="account">
+              {type === "investment" ? "Cuenta origen" : "Cuenta"}
+            </Label>
             {onCreateAccount && (
               <InlineCreateButton
                 label="Nueva"
@@ -344,7 +376,7 @@ export function TransactionForm({
               />
             )}
           </div>
-          {accounts.length === 0 ? (
+          {selectableAccounts.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
               Todavía no tenés cuentas.
               {onCreateAccount
@@ -353,7 +385,7 @@ export function TransactionForm({
             </p>
           ) : (
             <div className="space-y-2">
-              {accounts.map((a) => (
+              {selectableAccounts.map((a) => (
                 <button
                   key={a.id}
                   type="button"
@@ -386,7 +418,9 @@ export function TransactionForm({
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Ej: Supermercado"
+            placeholder={
+              type === "investment" ? "Ej: Compra AAPL" : "Ej: Supermercado"
+            }
           />
         </div>
 

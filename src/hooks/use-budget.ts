@@ -25,9 +25,12 @@ import type {
   SubcategoryBudgetConfig,
 } from "@/types/budget";
 
+export type BudgetCategoryKind = "expense" | "investment";
+
 export function useBudget(
   userId: string | undefined,
-  transactions: Transaction[]
+  transactions: Transaction[],
+  categoryKind: BudgetCategoryKind = "expense"
 ) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<BudgetSettings | null>(null);
@@ -42,13 +45,13 @@ export function useBudget(
     if (!userId) return;
     setDataLoading(true);
 
-    const cats = await fetchCategories(userId, "expense");
+    const cats = await fetchCategories(userId, categoryKind);
     setCategories(cats);
 
     const budgetSettings = await ensureBudgetSettings(userId, cats, year, month);
     setSettings(budgetSettings);
     setDataLoading(false);
-  }, [userId, year, month]);
+  }, [userId, year, month, categoryKind]);
 
   useEffect(() => {
     if (!userId) return;
@@ -56,7 +59,7 @@ export function useBudget(
     let cancelled = false;
 
     void (async () => {
-      const cats = await fetchCategories(userId, "expense");
+      const cats = await fetchCategories(userId, categoryKind);
       const budgetSettings = await ensureBudgetSettings(
         userId,
         cats,
@@ -73,7 +76,7 @@ export function useBudget(
     return () => {
       cancelled = true;
     };
-  }, [userId, year, month]);
+  }, [userId, year, month, categoryKind]);
 
   const monthTransactions = useMemo(
     () => filterByMonth(transactions, year, month),
@@ -119,8 +122,8 @@ export function useBudget(
   }, [settings, limits, topLevelCategories, categories]);
 
   const spentByCategoryId = useMemo(
-    () => computeSpentByCategoryId(monthTransactions, "expense"),
-    [monthTransactions]
+    () => computeSpentByCategoryId(monthTransactions, categoryKind),
+    [monthTransactions, categoryKind]
   );
 
   const spentByCategory = useMemo(() => {
@@ -239,5 +242,6 @@ export function useBudget(
     updateCategoryBudget,
     updateSubcategoryBudget,
     removeSubcategoryBudget,
+    categoryKind,
   };
 }

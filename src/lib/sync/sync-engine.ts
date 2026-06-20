@@ -71,6 +71,7 @@ export async function pushPendingChanges(userId: string): Promise<void> {
         user_id: userId,
         account_id: tx.account_id,
         category_id: tx.category_id,
+        investment_asset_id: tx.investment_asset_id ?? null,
         type: tx.type,
         amount_cents: tx.amount_cents,
         currency_code: tx.currency_code,

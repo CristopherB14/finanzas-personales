@@ -19,7 +19,6 @@ import {
 } from "@/lib/finance/calculations";
 import {
   accountBalanceFromTransactions,
-  totalBalanceFromTransactions,
   transactionCountByAccount,
 } from "@/lib/data/accounts";
 
@@ -35,14 +34,7 @@ export default function DashboardPage() {
     return <p className="text-slate-500">Cargando tu resumen…</p>;
   }
 
-  const totalBalance = totalBalanceFromTransactions(transactions);
-
-  const metrics = buildDashboardMetrics(
-    transactions,
-    year,
-    month,
-    totalBalance
-  );
+  const metrics = buildDashboardMetrics(transactions, year, month, accounts);
 
   const chartData = last6MonthsChart(transactions);
   const emergencyPercent = Math.min(100, (metrics.emergencyMonths / 6) * 100);
@@ -62,13 +54,20 @@ export default function DashboardPage() {
         </Button>
       </header>
 
-      <MetricCard
-        label="Patrimonio estimado (cuentas)"
-        value={formatMoney(metrics.netWorthCents)}
-        variant="hero"
-      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <MetricCard
+          label="Efectivo disponible"
+          value={formatMoney(metrics.cashCents)}
+          variant="hero"
+        />
+        <MetricCard
+          label="Patrimonio neto"
+          value={formatMoney(metrics.netWorthCents)}
+          subtext={`Inversiones: ${formatMoney(metrics.investmentAssetsCents)}`}
+        />
+      </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <MetricCard
           label="Ingresos del mes"
           value={formatMoney(metrics.incomeCents)}
@@ -76,6 +75,10 @@ export default function DashboardPage() {
         <MetricCard
           label="Gastos del mes"
           value={formatMoney(metrics.expenseCents)}
+        />
+        <MetricCard
+          label="Inversiones del mes"
+          value={formatMoney(metrics.investmentCents)}
         />
         <MetricCard
           label="Ahorro del mes"
@@ -90,7 +93,7 @@ export default function DashboardPage() {
       {accounts.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Saldo por cuenta</CardTitle>
+            <CardTitle className="text-base">Saldo por cuenta (efectivo)</CardTitle>
             <Button asChild variant="ghost" size="sm">
               <Link href="/cuentas">Ver todas</Link>
             </Button>
@@ -99,7 +102,8 @@ export default function DashboardPage() {
             {accounts.slice(0, 5).map((account) => {
               const balance = accountBalanceFromTransactions(
                 account.id,
-                transactions
+                transactions,
+                account.type
               );
               const count = transactionCountByAccount(account.id, transactions);
               return (
@@ -147,8 +151,7 @@ export default function DashboardPage() {
             {metrics.emergencyMonths.toFixed(1)} meses
           </p>
           <p className="text-sm text-slate-500">
-            Con tu ritmo actual de gastos, podrías cubrirte ese tiempo.
-            Objetivo recomendado: 6 meses.
+            Basado en tu efectivo disponible y ritmo de gastos. Objetivo: 6 meses.
           </p>
           <Progress value={emergencyPercent} className="h-3" />
         </CardContent>
@@ -167,7 +170,7 @@ export default function DashboardPage() {
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
             <p className="text-slate-600">
-              Empezá registrando tu primer gasto o ingreso.
+              Empezá registrando tu primer gasto, ingreso o inversión.
             </p>
             <Button asChild className="mt-4">
               <Link href="/gastos/nuevo">Registrar gasto</Link>

@@ -180,6 +180,7 @@ interface BudgetProgressSummaryProps {
   name: string;
   limitCents: number;
   spentCents: number;
+  spentLabel?: string;
   compact?: boolean;
 }
 
@@ -187,6 +188,7 @@ export function BudgetProgressSummary({
   name,
   limitCents,
   spentCents,
+  spentLabel = "Gastado",
   compact = false,
 }: BudgetProgressSummaryProps) {
   const pct = budgetUsagePercent(spentCents, limitCents);
@@ -224,7 +226,7 @@ export function BudgetProgressSummary({
           {formatMoney(limitCents)}
         </p>
         <p>
-          <span className="text-slate-400">Gastado: </span>
+          <span className="text-slate-400">{spentLabel}: </span>
           {formatMoney(spentCents)}
         </p>
         <p>
@@ -264,6 +266,7 @@ export function BudgetSubcategoryRow({
   categoryLimitCents,
   categoryName,
   percentageTotal,
+  spentLabel = "Gastado",
   onUpdate,
 }: {
   subcategoryName: string;
@@ -273,6 +276,7 @@ export function BudgetSubcategoryRow({
   categoryLimitCents: number;
   categoryName: string;
   percentageTotal: number;
+  spentLabel?: string;
   onUpdate: (config: CategoryBudgetConfig) => void;
 }) {
   return (
@@ -294,6 +298,7 @@ export function BudgetSubcategoryRow({
           name={subcategoryName}
           limitCents={limitCents}
           spentCents={spentCents}
+          spentLabel={spentLabel}
           compact
         />
       </div>

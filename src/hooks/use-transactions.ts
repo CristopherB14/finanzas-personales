@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@/lib/supabase/client";
+import { fetchCategories } from "@/lib/data/categories";
+import {
+  ensureInvestmentAsset,
+  recalculateAllInvestmentAssets,
+} from "@/lib/data/investment-assets";
 import {
   deleteLocalTransaction,
   getLocalTransactions,
@@ -31,6 +36,26 @@ function sortTransactions(transactions: LocalTransaction[]) {
   });
 }
 
+async function resolveInvestmentAssetId(
+  userId: string,
+  categoryId: string | null,
+  currencyCode: string
+): Promise<string | null> {
+  if (!categoryId) return null;
+
+  const categories = await fetchCategories(userId);
+  const subcategory = categories.find((c) => c.id === categoryId);
+  if (!subcategory?.parent_id) return null;
+
+  const asset = await ensureInvestmentAsset(
+    userId,
+    subcategory.parent_id,
+    categoryId,
+    currencyCode
+  );
+  return asset.id;
+}
+
 async function upsertRemoteTransaction(
   userId: string,
   tx: LocalTransaction
@@ -42,6 +67,7 @@ async function upsertRemoteTransaction(
       user_id: userId,
       account_id: tx.account_id,
       category_id: tx.category_id,
+      investment_asset_id: tx.investment_asset_id ?? null,
       type: tx.type,
       amount_cents: tx.amount_cents,
       currency_code: tx.currency_code,
@@ -64,6 +90,15 @@ async function deleteRemoteTransaction(
     .delete()
     .eq("user_id", userId)
     .eq("client_id", clientId);
+}
+
+async function syncInvestmentAssetsIfNeeded(
+  userId: string,
+  transactions: LocalTransaction[]
+): Promise<void> {
+  if (!navigator.onLine) return;
+  const categories = await fetchCategories(userId);
+  await recalculateAllInvestmentAssets(userId, transactions, categories);
 }
 
 async function loadLocalTransactions(
@@ -137,12 +172,23 @@ export function useTransactions(userId: string | undefined) {
     if (!userId) throw new Error("No autenticado");
 
     const client_id = uuidv4();
+    let investment_asset_id: string | null = null;
+
+    if (input.type === "investment") {
+      investment_asset_id = await resolveInvestmentAssetId(
+        userId,
+        input.category_id,
+        input.currency_code
+      );
+    }
+
     const tx: LocalTransaction = {
       id: `local-${client_id}`,
       user_id: userId,
       client_id,
       account_id: input.account_id,
       category_id: input.category_id,
+      investment_asset_id,
       type: input.type,
       amount_cents: input.amount_cents,
       currency_code: input.currency_code,
@@ -155,10 +201,14 @@ export function useTransactions(userId: string | undefined) {
     };
 
     await saveLocalTransaction(tx);
-    setTransactions((prev) => sortTransactions([tx, ...prev]));
+    const next = sortTransactions([tx, ...transactions]);
+    setTransactions(next);
 
     if (navigator.onLine) {
       await upsertRemoteTransaction(userId, tx);
+      if (input.type === "investment") {
+        await syncInvestmentAssetsIfNeeded(userId, next);
+      }
     }
 
     return tx;
@@ -173,10 +223,22 @@ export function useTransactions(userId: string | undefined) {
     const existing = transactions.find((t) => t.client_id === clientId);
     if (!existing) throw new Error("Movimiento no encontrado");
 
+    let investment_asset_id = existing.investment_asset_id ?? null;
+    if (input.type === "investment") {
+      investment_asset_id = await resolveInvestmentAssetId(
+        userId,
+        input.category_id,
+        input.currency_code
+      );
+    } else {
+      investment_asset_id = null;
+    }
+
     const tx: LocalTransaction = {
       ...existing,
       account_id: input.account_id,
       category_id: input.category_id,
+      investment_asset_id,
       type: input.type,
       amount_cents: input.amount_cents,
       currency_code: input.currency_code,
@@ -187,12 +249,19 @@ export function useTransactions(userId: string | undefined) {
     };
 
     await updateLocalTransaction(tx);
-    setTransactions((prev) =>
-      sortTransactions(prev.map((t) => (t.client_id === clientId ? tx : t)))
+    const next = sortTransactions(
+      transactions.map((t) => (t.client_id === clientId ? tx : t))
     );
+    setTransactions(next);
 
     if (navigator.onLine) {
       await upsertRemoteTransaction(userId, tx);
+      if (
+        input.type === "investment" ||
+        existing.type === "investment"
+      ) {
+        await syncInvestmentAssetsIfNeeded(userId, next);
+      }
     }
 
     return tx;
@@ -205,10 +274,14 @@ export function useTransactions(userId: string | undefined) {
     if (!existing) throw new Error("Movimiento no encontrado");
 
     await deleteLocalTransaction(existing);
-    setTransactions((prev) => prev.filter((t) => t.client_id !== clientId));
+    const next = transactions.filter((t) => t.client_id !== clientId);
+    setTransactions(next);
 
     if (navigator.onLine) {
       await deleteRemoteTransaction(userId, clientId);
+      if (existing.type === "investment") {
+        await syncInvestmentAssetsIfNeeded(userId, next);
+      }
     }
   };
 

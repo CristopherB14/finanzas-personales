@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@/lib/supabase/client";
 import { getAccountTypeOption } from "@/constants/accounts";
 import { getLocalTransactions, localDb } from "@/lib/db/local-db";
+import { totalInvestedCents } from "@/lib/finance/investments";
 import type { Account, AccountType, Transaction } from "@/types/database";
 
 export async function fetchAccounts(userId: string): Promise<Account[]> {
@@ -177,15 +178,32 @@ export async function migrateOrphanTransactions(userId: string): Promise<void> {
   }
 }
 
+export function isCashAccountType(type: AccountType): boolean {
+  return type !== "investment";
+}
+
+function transactionDeltaForAccount(
+  transaction: Transaction,
+  accountType: AccountType
+): number {
+  if (transaction.type === "income") return transaction.amount_cents;
+  if (transaction.type === "expense") return -transaction.amount_cents;
+  if (transaction.type === "investment") {
+    return isCashAccountType(accountType)
+      ? -transaction.amount_cents
+      : transaction.amount_cents;
+  }
+  return 0;
+}
+
 export function accountBalanceFromTransactions(
   accountId: string,
-  transactions: Transaction[]
+  transactions: Transaction[],
+  accountType: AccountType = "checking"
 ): number {
   return transactions.reduce((sum, t) => {
     if (t.account_id !== accountId) return sum;
-    if (t.type === "income") return sum + t.amount_cents;
-    if (t.type === "expense") return sum - t.amount_cents;
-    return sum;
+    return sum + transactionDeltaForAccount(t, accountType);
   }, 0);
 }
 
@@ -196,12 +214,33 @@ export function transactionCountByAccount(
   return transactions.filter((t) => t.account_id === accountId).length;
 }
 
-export function totalBalanceFromTransactions(
-  transactions: Transaction[]
+export function totalCashBalanceFromTransactions(
+  transactions: Transaction[],
+  accounts: Account[]
 ): number {
+  const accountTypeById = new Map(accounts.map((a) => [a.id, a.type]));
+
   return transactions.reduce((sum, t) => {
-    if (t.type === "income") return sum + t.amount_cents;
-    if (t.type === "expense") return sum - t.amount_cents;
-    return sum;
+    const accountType = accountTypeById.get(t.account_id) ?? "checking";
+    if (!isCashAccountType(accountType)) return sum;
+    return sum + transactionDeltaForAccount(t, accountType);
   }, 0);
+}
+
+export function totalBalanceFromTransactions(
+  transactions: Transaction[],
+  accounts: Account[] = []
+): number {
+  if (accounts.length === 0) {
+    return transactions.reduce((sum, t) => {
+      if (t.type === "income") return sum + t.amount_cents;
+      if (t.type === "expense") return sum - t.amount_cents;
+      return sum;
+    }, 0);
+  }
+
+  return (
+    totalCashBalanceFromTransactions(transactions, accounts) +
+    totalInvestedCents(transactions)
+  );
 }

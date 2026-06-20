@@ -29,3 +29,23 @@ export const MIGRATION_INCOME_CATEGORIES: {
   { name: "Intereses", icon: "percent", color: "#14b8a6" },
   { name: "Extraordinario", icon: "gift", color: "#ec4899" },
 ];
+
+export const MIGRATION_INVESTMENT_CATEGORIES = {
+  name: "Crecimiento",
+  icon: "trending-up",
+  color: "#06b6d4",
+};
+
+export const MIGRATION_INVESTMENT_SUBCATEGORIES: {
+  name: string;
+  icon: string;
+  color: string;
+}[] = [
+  { name: "Acciones", icon: "trending-up", color: "#3b82f6" },
+  { name: "ETFs", icon: "pie-chart", color: "#6366f1" },
+  { name: "Bonos", icon: "percent", color: "#14b8a6" },
+  { name: "Fondos mutuos", icon: "store", color: "#8b5cf6" },
+  { name: "Cripto", icon: "zap", color: "#f59e0b" },
+  { name: "Capacitación", icon: "graduation-cap", color: "#22c55e" },
+  { name: "Otros", icon: "more-horizontal", color: "#64748b" },
+];

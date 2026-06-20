@@ -1,11 +1,14 @@
 import { format, subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
-import type { Transaction } from "@/types/database";
+import type { Transaction, TransactionType } from "@/types/database";
+
+export type CashFlowTypeFilter = "all" | "income" | "expense" | "investment";
 
 export interface CashFlowFilters {
   fromDate: string;
   toDate: string;
   accountId: string;
   categoryId: string;
+  typeFilter: CashFlowTypeFilter;
 }
 
 export interface CashFlowRow {
@@ -23,11 +26,27 @@ export function defaultCashFlowFilters(today = new Date()): CashFlowFilters {
     toDate: format(to, "yyyy-MM-dd"),
     accountId: "",
     categoryId: "",
+    typeFilter: "all",
   };
 }
 
 function isCashFlowTransaction(t: Transaction): boolean {
-  return t.type === "income" || t.type === "expense";
+  return (
+    t.type === "income" || t.type === "expense" || t.type === "investment"
+  );
+}
+
+function matchesTypeFilter(
+  transaction: Transaction,
+  typeFilter: CashFlowTypeFilter
+): boolean {
+  if (typeFilter === "all") return true;
+  return transaction.type === typeFilter;
+}
+
+function transactionDelta(transaction: Transaction): number {
+  if (transaction.type === "income") return transaction.amount_cents;
+  return -transaction.amount_cents;
 }
 
 function matchesAccountFilter(
@@ -39,19 +58,17 @@ function matchesAccountFilter(
 
 export function computeOpeningBalance(
   transactions: Transaction[],
-  filters: Pick<CashFlowFilters, "accountId" | "fromDate">
+  filters: Pick<CashFlowFilters, "accountId" | "fromDate" | "typeFilter">
 ): number {
   let balance = 0;
 
   for (const transaction of transactions) {
     if (!isCashFlowTransaction(transaction)) continue;
+    if (!matchesTypeFilter(transaction, filters.typeFilter)) continue;
     if (!matchesAccountFilter(transaction, filters.accountId)) continue;
     if (transaction.transaction_date >= filters.fromDate) continue;
 
-    balance +=
-      transaction.type === "income"
-        ? transaction.amount_cents
-        : -transaction.amount_cents;
+    balance += transactionDelta(transaction);
   }
 
   return balance;
@@ -63,6 +80,7 @@ export function filterCashFlowTransactions(
 ): Transaction[] {
   return transactions.filter((transaction) => {
     if (!isCashFlowTransaction(transaction)) return false;
+    if (!matchesTypeFilter(transaction, filters.typeFilter)) return false;
     if (transaction.transaction_date < filters.fromDate) return false;
     if (transaction.transaction_date > filters.toDate) return false;
     if (!matchesAccountFilter(transaction, filters.accountId)) return false;
@@ -92,10 +110,7 @@ export function buildCashFlowRows(
 
   let runningBalanceCents = openingBalanceCents;
   const rows: CashFlowRow[] = filtered.map((transaction) => {
-    const deltaCents =
-      transaction.type === "income"
-        ? transaction.amount_cents
-        : -transaction.amount_cents;
+    const deltaCents = transactionDelta(transaction);
     runningBalanceCents += deltaCents;
 
     return {
@@ -107,4 +122,15 @@ export function buildCashFlowRows(
   });
 
   return { openingBalanceCents, rows };
+}
+
+export function cashFlowEditPath(transaction: Transaction): string {
+  switch (transaction.type as TransactionType) {
+    case "income":
+      return `/ingresos/${transaction.client_id}/editar`;
+    case "investment":
+      return `/inversiones/${transaction.client_id}/editar`;
+    default:
+      return `/gastos/${transaction.client_id}/editar`;
+  }
 }

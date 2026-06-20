@@ -53,7 +53,9 @@ export function CategoryForm({
     mode === "create"
       ? type === "expense"
         ? "Nueva categoría de gasto"
-        : "Nueva categoría de ingreso"
+        : type === "investment"
+          ? "Nueva categoría de inversión"
+          : "Nueva categoría de ingreso"
       : "Editar categoría";
 
   const handleSubmit = async (e: React.FormEvent) => {

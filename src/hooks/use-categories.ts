@@ -139,10 +139,17 @@ export function useCategories(
     [categories, userId]
   );
 
+  const investmentCategories = useMemo(
+    () =>
+      userId ? getTopLevelCategories(categories, "investment") : [],
+    [categories, userId]
+  );
+
   return {
     categories: userId ? categories : [],
     expenseCategories,
     incomeCategories,
+    investmentCategories,
     getSubcategoriesFor,
     loading,
     refresh,

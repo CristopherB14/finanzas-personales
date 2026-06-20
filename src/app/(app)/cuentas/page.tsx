@@ -77,7 +77,11 @@ export default function CuentasPage() {
 
       <ul className="space-y-2">
         {filtered.map((account) => {
-          const balance = accountBalanceFromTransactions(account.id, transactions);
+          const balance = accountBalanceFromTransactions(
+            account.id,
+            transactions,
+            account.type
+          );
           const count = transactionCountByAccount(account.id, transactions);
 
           return (
