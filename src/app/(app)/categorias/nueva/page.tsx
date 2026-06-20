@@ -32,7 +32,7 @@ function NuevaCategoriaForm() {
 
 export default function NuevaCategoriaPage() {
   return (
-    <Suspense fallback={<p className="text-slate-500">Cargando…</p>}>
+    <Suspense fallback={<p className="text-muted-foreground">Cargando…</p>}>
       <NuevaCategoriaForm />
     </Suspense>
   );

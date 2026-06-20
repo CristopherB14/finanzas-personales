@@ -16,6 +16,13 @@ import {
   LineChart,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  brandLink,
+  ghostActionButton,
+  mobileNavLink,
+  navLink,
+  primaryActionLink,
+} from "@/lib/a11y";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -52,64 +59,66 @@ export function AppNav() {
 
   return (
     <>
-      <aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 md:block">
-        <Link href="/dashboard" className="mb-8 block px-2 text-lg font-bold text-emerald-700">
+      <aside className="hidden w-56 shrink-0 border-r border-border bg-card p-4 md:block">
+        <Link href="/dashboard" className={cn(brandLink, "mb-8 block px-2 text-lg")}>
           Mis Finanzas
         </Link>
-        <nav className="flex flex-col gap-1">
-          {sidebarItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                pathname === href || pathname.startsWith(href + "/")
-                  ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50"
-                  : "text-slate-600 hover:bg-slate-50 dark:text-slate-400"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </Link>
-          ))}
+        <nav className="flex flex-col gap-1" aria-label="Navegación principal">
+          {sidebarItems.map(({ href, label, icon: Icon }) => {
+            const active =
+              pathname === href || pathname.startsWith(href + "/");
+
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={navLink(active)}
+              >
+                <Icon className="h-5 w-5" aria-hidden />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
-        <Link
-          href="/gastos/nuevo"
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          <Plus className="h-4 w-4" />
+        <Link href="/gastos/nuevo" className={cn(primaryActionLink, "mt-6")}>
+          <Plus className="h-4 w-4" aria-hidden />
           Registrar gasto
         </Link>
         <button
           type="button"
           onClick={() => void handleLogout()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900"
+          className={cn(ghostActionButton, "mt-2")}
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4" aria-hidden />
           Cerrar sesión
         </button>
       </aside>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur md:hidden"
+        aria-label="Navegación móvil"
+      >
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
-          {navItems.map(({ href, label, icon: Icon, highlight }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium",
-                highlight &&
-                  "-mt-5 flex h-14 w-14 flex-none items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg",
-                !highlight &&
-                  (pathname === href
-                    ? "text-emerald-700"
-                    : "text-slate-500")
-              )}
-            >
-              <Icon className={cn("h-5 w-5", highlight && "h-6 w-6")} />
-              {!highlight && <span>{label}</span>}
-            </Link>
-          ))}
+          {navItems.map(({ href, label, icon: Icon, highlight }) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
+
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                aria-label={highlight ? label : undefined}
+                className={cn(
+                  "flex flex-1",
+                  mobileNavLink(active, highlight)
+                )}
+              >
+                <Icon className={cn("h-5 w-5", highlight && "h-6 w-6")} aria-hidden />
+                {!highlight && <span>{label}</span>}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </>
@@ -119,7 +128,10 @@ export function AppNav() {
 export function OfflineBanner({ online }: { online: boolean }) {
   if (online) return null;
   return (
-    <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white">
+    <div
+      role="status"
+      className="bg-amber-600 px-4 py-2 text-center text-sm font-medium text-white"
+    >
       Sin conexión — tus cambios se guardan en este dispositivo
     </div>
   );

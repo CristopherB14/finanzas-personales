@@ -2,17 +2,27 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { focusRing, interactive } from "@/lib/a11y";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:pointer-events-none disabled:opacity-50",
+  cn(
+    interactive,
+    focusRing,
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+  ),
   {
     variants: {
       variant: {
-        default: "bg-emerald-600 text-white hover:bg-emerald-700",
-        secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100",
-        outline: "border border-slate-200 bg-transparent hover:bg-slate-50 dark:border-slate-700",
-        ghost: "hover:bg-slate-100 dark:hover:bg-slate-800",
-        destructive: "bg-red-600 text-white hover:bg-red-700",
+        default:
+          "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/95",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70 dark:hover:bg-secondary/60",
+        outline:
+          "border border-border bg-transparent hover:bg-muted/60 active:bg-muted/80",
+        ghost:
+          "hover:bg-muted/60 active:bg-muted/80 dark:hover:bg-muted/40",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/95",
       },
       size: {
         default: "h-11 px-5 py-2",

@@ -29,7 +29,7 @@ export default function TransferenciasPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Transferencias</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Movimientos entre cuentas. No afectan ingresos, gastos ni patrimonio
             neto.
           </p>
@@ -42,10 +42,10 @@ export default function TransferenciasPage() {
         </Button>
       </header>
 
-      {loading && <p className="text-slate-500">Cargando…</p>}
+      {loading && <p className="text-muted-foreground">Cargando…</p>}
 
       {!loading && transferencias.length === 0 && (
-        <p className="text-slate-500">No hay transferencias registradas.</p>
+        <p className="text-muted-foreground">No hay transferencias registradas.</p>
       )}
 
       <ul className="space-y-2">
@@ -67,7 +67,7 @@ export default function TransferenciasPage() {
                       <p className="font-medium">
                         {t.description || "Transferencia"}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {format(new Date(t.transaction_date), "d MMM yyyy", {
                           locale: es,
                         })}

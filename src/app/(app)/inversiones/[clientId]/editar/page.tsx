@@ -36,13 +36,13 @@ export default function EditarInversionPage({
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
   if (loading) {
-    return <p className="text-slate-500">Cargando…</p>;
+    return <p className="text-muted-foreground">Cargando…</p>;
   }
 
   if (!transaction || transaction.type !== "investment") {
     return (
       <div className="space-y-4">
-        <p className="text-slate-500">No se encontró la inversión.</p>
+        <p className="text-muted-foreground">No se encontró la inversión.</p>
         <Link href="/inversiones" className="text-emerald-700 hover:underline">
           Volver a inversiones
         </Link>

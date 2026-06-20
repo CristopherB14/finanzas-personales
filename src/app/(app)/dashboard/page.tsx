@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const month = now.getMonth() + 1;
 
   if (userLoading || txLoading) {
-    return <p className="text-slate-500">Cargando tu resumen…</p>;
+    return <p className="text-muted-foreground">Cargando tu resumen…</p>;
   }
 
   const metrics = buildDashboardMetrics(transactions, year, month, accounts);
@@ -43,7 +43,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-slate-500">Tu situación financiera</p>
+          <p className="text-sm text-muted-foreground">Tu situación financiera</p>
           <h1 className="text-2xl font-bold">Dashboard</h1>
         </div>
         <Button asChild className="hidden md:inline-flex">
@@ -123,14 +123,16 @@ export default function DashboardPage() {
                     </span>
                     <div>
                       <p className="text-sm font-medium">{account.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {count} {count === 1 ? "movimiento" : "movimientos"}
                       </p>
                     </div>
                   </div>
                   <p
                     className={`text-sm font-semibold tabular-nums ${
-                      balance >= 0 ? "text-emerald-600" : "text-red-600"
+                      balance >= 0
+                        ? "text-emerald-700 dark:text-emerald-400"
+                        : "text-red-700 dark:text-red-400"
                     }`}
                   >
                     {formatMoney(balance, account.currency_code)}
@@ -150,7 +152,7 @@ export default function DashboardPage() {
           <p className="text-2xl font-semibold tabular-nums">
             {metrics.emergencyMonths.toFixed(1)} meses
           </p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Basado en tu efectivo disponible y ritmo de gastos. Objetivo: 6 meses.
           </p>
           <Progress value={emergencyPercent} className="h-3" />

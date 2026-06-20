@@ -34,13 +34,13 @@ export default function EditarGastoPage({
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
   if (loading) {
-    return <p className="text-slate-500">Cargando…</p>;
+    return <p className="text-muted-foreground">Cargando…</p>;
   }
 
   if (!transaction || transaction.type !== "expense") {
     return (
       <div className="space-y-4">
-        <p className="text-slate-500">No se encontró el gasto.</p>
+        <p className="text-muted-foreground">No se encontró el gasto.</p>
         <Link href="/gastos" className="text-emerald-700 hover:underline">
           Volver a gastos
         </Link>

@@ -49,13 +49,13 @@ export default function EditarCategoriaPage({
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
   if (loading) {
-    return <p className="text-slate-500">Cargando…</p>;
+    return <p className="text-muted-foreground">Cargando…</p>;
   }
 
   if (!category) {
     return (
       <div className="space-y-4">
-        <p className="text-slate-500">No se encontró la categoría.</p>
+        <p className="text-muted-foreground">No se encontró la categoría.</p>
         <Link href="/categorias" className="text-emerald-700 hover:underline">
           Volver a categorías
         </Link>
@@ -67,7 +67,7 @@ export default function EditarCategoriaPage({
     const parent = categories.find((c) => c.id === category.parent_id);
     return (
       <div className="space-y-4">
-        <p className="text-slate-500">
+        <p className="text-muted-foreground">
           Esta es una subcategoría
           {parent ? ` de ${parent.name}` : ""}.
         </p>
@@ -124,7 +124,7 @@ export default function EditarCategoriaPage({
         </div>
 
         {subcategories.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Todavía no hay subcategorías en {category.name}.
           </p>
         ) : (
@@ -146,7 +146,7 @@ export default function EditarCategoriaPage({
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{sub.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           {count}{" "}
                           {count === 1 ? "movimiento" : "movimientos"}
                         </p>

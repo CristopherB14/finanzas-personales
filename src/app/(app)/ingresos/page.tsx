@@ -41,10 +41,10 @@ export default function IngresosPage() {
         </Button>
       </header>
 
-      {loading && <p className="text-slate-500">Cargando…</p>}
+      {loading && <p className="text-muted-foreground">Cargando…</p>}
 
       {!loading && ingresos.length === 0 && (
-        <p className="text-slate-500">No hay ingresos registrados.</p>
+        <p className="text-muted-foreground">No hay ingresos registrados.</p>
       )}
 
       <ul className="space-y-2">
@@ -54,7 +54,7 @@ export default function IngresosPage() {
               <CardContent className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{t.description || "Ingreso"}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {format(new Date(t.transaction_date), "d MMM yyyy", {
                       locale: es,
                     })}
@@ -66,7 +66,7 @@ export default function IngresosPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-emerald-600 tabular-nums">
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
                     +{formatMoney(t.amount_cents, t.currency_code)}
                   </p>
                   <Button asChild variant="ghost" size="sm" className="h-8 px-2">

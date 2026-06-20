@@ -46,7 +46,7 @@ export default function CuentasPage() {
 
       {accounts.length > 0 && (
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -56,7 +56,7 @@ export default function CuentasPage() {
         </div>
       )}
 
-      {loading && <p className="text-slate-500">Cargando…</p>}
+      {loading && <p className="text-muted-foreground">Cargando…</p>}
 
       {!loading && accounts.length === 0 && (
         <Card className="border-dashed">
@@ -72,7 +72,7 @@ export default function CuentasPage() {
       )}
 
       {!loading && accounts.length > 0 && filtered.length === 0 && (
-        <p className="text-slate-500">No se encontraron cuentas con ese criterio.</p>
+        <p className="text-muted-foreground">No se encontraron cuentas con ese criterio.</p>
       )}
 
       <ul className="space-y-2">
@@ -100,18 +100,20 @@ export default function CuentasPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{account.name}</p>
                     {account.description && (
-                      <p className="truncate text-xs text-slate-500">
+                      <p className="truncate text-xs text-muted-foreground">
                         {account.description}
                       </p>
                     )}
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {count} {count === 1 ? "movimiento" : "movimientos"}
                     </p>
                   </div>
                   <div className="text-right">
                     <p
                       className={`font-semibold tabular-nums ${
-                        balance >= 0 ? "text-emerald-600" : "text-red-600"
+                        balance >= 0
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-red-700 dark:text-red-400"
                       }`}
                     >
                       {formatMoney(balance, account.currency_code)}

@@ -25,7 +25,7 @@ export default function NuevaInversionPage() {
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
   if (loading) {
-    return <p className="text-slate-500">Cargando…</p>;
+    return <p className="text-muted-foreground">Cargando…</p>;
   }
 
   return (

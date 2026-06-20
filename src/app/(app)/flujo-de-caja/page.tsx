@@ -13,6 +13,7 @@ import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
 import { formatCategoryLabel } from "@/lib/categories/helpers";
 import { formatMoney } from "@/lib/format";
+import { selectField, tableLink } from "@/lib/a11y";
 import {
   buildCashFlowRows,
   cashFlowEditPath,
@@ -60,7 +61,7 @@ export default function FlujoDeCajaPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold">Flujo de caja</h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Ingresos y gastos ordenados por fecha con saldo acumulado. Las
           transacciones programadas no están disponibles aún.
         </p>
@@ -98,7 +99,7 @@ export default function FlujoDeCajaPage() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, accountId: e.target.value }))
               }
-              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className={selectField}
             >
               <option value="">Todas las cuentas</option>
               {accounts.map((account) => (
@@ -119,7 +120,7 @@ export default function FlujoDeCajaPage() {
                   typeFilter: e.target.value as CashFlowTypeFilter,
                 }))
               }
-              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className={selectField}
             >
               <option value="all">Todos</option>
               <option value="income">Ingresos</option>
@@ -139,7 +140,7 @@ export default function FlujoDeCajaPage() {
                   categoryId: e.target.value,
                 }))
               }
-              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className={selectField}
             >
               <option value="">Todas las categorías</option>
               {cashFlowCategories.map((category) => (
@@ -155,13 +156,13 @@ export default function FlujoDeCajaPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500">Saldo inicial del período</p>
+            <p className="text-xs text-muted-foreground">Saldo inicial del período</p>
             <p
               className={cn(
                 "text-lg font-semibold tabular-nums",
                 openingBalanceCents >= 0
-                  ? "text-emerald-600"
-                  : "text-red-600"
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-red-700 dark:text-red-400"
               )}
             >
               {formatMoney(openingBalanceCents)}
@@ -170,11 +171,13 @@ export default function FlujoDeCajaPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500">Saldo final del período</p>
+            <p className="text-xs text-muted-foreground">Saldo final del período</p>
             <p
               className={cn(
                 "text-lg font-semibold tabular-nums",
-                closingBalanceCents >= 0 ? "text-emerald-600" : "text-red-600"
+                closingBalanceCents >= 0
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-red-700 dark:text-red-400"
               )}
             >
               {formatMoney(closingBalanceCents)}
@@ -183,17 +186,17 @@ export default function FlujoDeCajaPage() {
         </Card>
       </div>
 
-      {loading && <p className="text-slate-500">Cargando…</p>}
+      {loading && <p className="text-muted-foreground">Cargando…</p>}
 
       {!loading && rows.length === 0 && (
-        <p className="text-slate-500">
+        <p className="text-muted-foreground">
           No hay movimientos en el rango seleccionado.
         </p>
       )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-900">
+          <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground dark:bg-slate-900">
             <tr>
               <th className="px-4 py-3">Fecha</th>
               <th className="px-4 py-3">Descripción</th>
@@ -217,13 +220,15 @@ export default function FlujoDeCajaPage() {
                     locale: es,
                   })}
                   {isFuture && (
-                    <span className="ml-2 text-xs text-amber-600">Futuro</span>
+                    <span className="ml-2 text-xs text-amber-700 dark:text-amber-400">
+                      Futuro
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   <Link
                     href={cashFlowEditPath(transaction)}
-                    className="hover:text-emerald-700 hover:underline"
+                    className={tableLink}
                   >
                     {transaction.description ||
                       (transaction.type === "expense"
@@ -235,12 +240,12 @@ export default function FlujoDeCajaPage() {
                             : "Ingreso")}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-500">
+                <td className="px-4 py-3 text-muted-foreground">
                   {transaction.category_id
                     ? categoryLabel(transaction.category_id) || "—"
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-slate-500">
+                <td className="px-4 py-3 text-muted-foreground">
                   {transaction.type === "transfer" && transaction.to_account_id
                     ? `${accountMap.get(transaction.account_id) ?? "—"} → ${accountMap.get(transaction.to_account_id) ?? "—"}`
                     : (accountMap.get(transaction.account_id) ?? "—")}
@@ -251,8 +256,8 @@ export default function FlujoDeCajaPage() {
                     transaction.type === "transfer"
                       ? "text-sky-700 dark:text-sky-400"
                       : deltaCents >= 0
-                        ? "text-emerald-600"
-                        : "text-red-600"
+                        ? "text-emerald-700 dark:text-emerald-400"
+                        : "text-red-700 dark:text-red-400"
                   )}
                 >
                   {transaction.type === "transfer" ? (
@@ -268,8 +273,8 @@ export default function FlujoDeCajaPage() {
                   className={cn(
                     "px-4 py-3 text-right font-semibold tabular-nums",
                     runningBalanceCents >= 0
-                      ? "text-emerald-600"
-                      : "text-red-600"
+                      ? "text-emerald-700 dark:text-emerald-400"
+                      : "text-red-700 dark:text-red-400"
                   )}
                 >
                   {formatMoney(runningBalanceCents, transaction.currency_code)}

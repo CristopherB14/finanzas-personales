@@ -6,6 +6,7 @@ import {
   Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { brandLink } from "@/lib/a11y";
 
 const features = [
   {
@@ -34,7 +35,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-slate-50 dark:from-slate-950 dark:to-slate-900">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
-        <span className="text-xl font-bold text-emerald-700">Mis Finanzas</span>
+        <span className={brandLink}>Mis Finanzas</span>
         <div className="flex gap-2">
           <Button variant="ghost" asChild>
             <Link href="/login">Ingresar</Link>
@@ -49,9 +50,9 @@ export default function HomePage() {
         <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white md:text-5xl">
           Tu economía personal,
           <br />
-          <span className="text-emerald-600">simple y visual</span>
+          <span className="text-accent">simple y visual</span>
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600 md:mx-0">
+        <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground md:mx-0">
           Dejá la planilla Excel. Controlá ingresos, gastos, presupuesto y
           fondo de emergencia con respuestas en lenguaje claro.
         </p>
@@ -68,11 +69,11 @@ export default function HomePage() {
           {features.map(({ icon: Icon, title, text }) => (
             <div
               key={title}
-              className="rounded-2xl border border-slate-200/80 bg-white p-6 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-2xl border border-border/80 bg-card p-6 text-left shadow-sm"
             >
-              <Icon className="h-8 w-8 text-emerald-600" />
+              <Icon className="h-8 w-8 text-accent" aria-hidden />
               <h3 className="mt-3 font-semibold">{title}</h3>
-              <p className="mt-1 text-sm text-slate-500">{text}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{text}</p>
             </div>
           ))}
         </div>

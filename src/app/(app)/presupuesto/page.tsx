@@ -35,7 +35,7 @@ function BudgetSection({ categoryKind }: { categoryKind: BudgetCategoryKind }) {
   } = useBudget(user?.id, transactions, categoryKind);
 
   if (loading) {
-    return <p className="text-slate-500">Cargando presupuesto…</p>;
+    return <p className="text-muted-foreground">Cargando presupuesto…</p>;
   }
 
   const spentLabel =
@@ -118,7 +118,7 @@ export default function PresupuestoPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold">Presupuesto</h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Configurá límites para gastos e inversiones y compará con lo registrado
           este mes.
         </p>

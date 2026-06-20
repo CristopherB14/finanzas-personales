@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { textLink } from "@/lib/a11y";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function RegistroPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Crear cuenta</CardTitle>
@@ -83,14 +84,14 @@ export default function RegistroPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creando…" : "Crear cuenta"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-slate-500">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿Ya tenés cuenta?{" "}
-            <Link href="/login" className="text-emerald-600 hover:underline">
+            <Link href="/login" className={textLink}>
               Ingresar
             </Link>
           </p>

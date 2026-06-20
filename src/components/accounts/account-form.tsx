@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { ACCOUNT_TYPE_OPTIONS } from "@/constants/accounts";
 import type { Account, AccountType } from "@/types/database";
-import { cn } from "@/lib/utils";
+import { choiceCard, errorText } from "@/lib/a11y";
 
 interface AccountFormProps {
   mode: "create" | "edit";
@@ -118,12 +118,7 @@ export function AccountForm({
               key={option.type}
               type="button"
               onClick={() => setType(option.type)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors",
-                type === option.type
-                  ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
-              )}
+              className={choiceCard(type === option.type)}
             >
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
@@ -167,7 +162,7 @@ export function AccountForm({
       {variant === "page" && mode === "edit" && onDelete && (
         <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
           {deleteError && (
-            <p className="text-sm text-red-600">{deleteError}</p>
+            <p className={errorText}>{deleteError}</p>
           )}
           <Button
             type="button"

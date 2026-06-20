@@ -12,7 +12,7 @@ import { useUser } from "@/hooks/use-user";
 import { useCategories } from "@/hooks/use-categories";
 import { useTransactions } from "@/hooks/use-transactions";
 import { transactionCountByCategory } from "@/lib/data/categories";
-import { cn } from "@/lib/utils";
+import { choicePill } from "@/lib/a11y";
 import type { Category } from "@/types/database";
 
 export default function CategoriasPage() {
@@ -60,12 +60,7 @@ export default function CategoriasPage() {
             key={type}
             type="button"
             onClick={() => setTab(type)}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              tab === type
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-100 text-slate-700 dark:bg-slate-800"
-            )}
+            className={choicePill(tab === type)}
           >
             {type === "expense"
               ? "Gastos"
@@ -76,7 +71,7 @@ export default function CategoriasPage() {
         ))}
       </div>
 
-      {loading && <p className="text-slate-500">Cargando…</p>}
+      {loading && <p className="text-muted-foreground">Cargando…</p>}
 
       {!loading && categories.length === 0 && (
         <Card className="border-dashed">
@@ -119,7 +114,7 @@ export default function CategoriasPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{category.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {count}{" "}
                       {count === 1 ? "movimiento" : "movimientos"}
                       {subcategories.length > 0 &&
@@ -171,7 +166,7 @@ export default function CategoriasPage() {
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium">{sub.name}</p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-muted-foreground">
                                 {subCount}{" "}
                                 {subCount === 1 ? "movimiento" : "movimientos"}
                               </p>

@@ -14,6 +14,14 @@ import {
 } from "@/lib/data/accounts";
 import { validateTransferInput } from "@/lib/finance/transfers";
 import { parseMoneyInput, formatMoney } from "@/lib/format";
+import {
+  choiceCard,
+  emptyPanel,
+  errorText,
+  inlineAction,
+  metaText,
+} from "@/lib/a11y";
+import { cn } from "@/lib/utils";
 import type {
   Account,
   AccountType,
@@ -59,7 +67,7 @@ function InlineCreateButton({
       type="button"
       variant="ghost"
       size="sm"
-      className="h-8 gap-1 px-2 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+      className={cn(inlineAction, "h-8 gap-1 px-2")}
       onClick={onClick}
       disabled={disabled}
     >
@@ -97,7 +105,7 @@ function AccountPicker({
         )}
       </div>
       {options.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
+        <p className={emptyPanel}>
           Todavía no tenés cuentas disponibles.
           {onCreate ? ' Tocá "Nueva" para crear una.' : " Creá una desde Cuentas."}
         </p>
@@ -108,11 +116,7 @@ function AccountPicker({
               key={account.id}
               type="button"
               onClick={() => onSelect(account.id)}
-              className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
-                selectedId === account.id
-                  ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
-              }`}
+              className={choiceCard(selectedId === account.id)}
             >
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
@@ -261,7 +265,7 @@ export function TransferForm({
             required
           />
           {fromAccount && (
-            <p className="text-xs text-slate-500">
+            <p className={metaText}>
               Saldo disponible en origen:{" "}
               {formatMoney(sourceBalance, fromAccount.currency_code)}
             </p>
@@ -307,7 +311,7 @@ export function TransferForm({
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className={errorText}>{error}</p>}
 
         <Button type="submit" className="w-full" size="lg" disabled={saving}>
           {saving
@@ -320,7 +324,7 @@ export function TransferForm({
         {mode === "edit" && onDelete && (
           <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
             {deleteError && (
-              <p className="text-sm text-red-600">{deleteError}</p>
+              <p className={errorText}>{deleteError}</p>
             )}
             <Button
               type="button"

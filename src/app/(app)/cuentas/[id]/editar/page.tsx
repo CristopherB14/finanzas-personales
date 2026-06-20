@@ -26,13 +26,13 @@ export default function EditarCuentaPage({
   if (!user) return <p>Iniciá sesión para continuar.</p>;
 
   if (loading) {
-    return <p className="text-slate-500">Cargando…</p>;
+    return <p className="text-muted-foreground">Cargando…</p>;
   }
 
   if (!account) {
     return (
       <div className="space-y-4">
-        <p className="text-slate-500">No se encontró la cuenta.</p>
+        <p className="text-muted-foreground">No se encontró la cuenta.</p>
         <Link href="/cuentas" className="text-emerald-700 hover:underline">
           Volver a cuentas
         </Link>

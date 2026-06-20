@@ -12,6 +12,7 @@ import {
 } from "@/lib/finance/calculations";
 import type { CategoryBudgetConfig, BudgetLimitMode } from "@/types/budget";
 import { cn } from "@/lib/utils";
+import { choicePill, metaText, mutedText } from "@/lib/a11y";
 
 interface BudgetLimitEditorProps {
   idPrefix: string;
@@ -87,26 +88,14 @@ export function BudgetLimitEditor({
           <button
             type="button"
             onClick={() => setMode("fixed")}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              compact && "px-3 py-1.5 text-xs",
-              config.mode === "fixed"
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-100 text-slate-700 dark:bg-slate-800"
-            )}
+            className={choicePill(config.mode === "fixed", compact)}
           >
             Monto fijo
           </button>
           <button
             type="button"
             onClick={() => setMode("percentage")}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              compact && "px-3 py-1.5 text-xs",
-              config.mode === "percentage"
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-100 text-slate-700 dark:bg-slate-800"
-            )}
+            className={choicePill(config.mode === "percentage", compact)}
           >
             Porcentaje
           </button>
@@ -155,9 +144,9 @@ export function BudgetLimitEditor({
               }}
               className={cn("max-w-[120px]", compact && "h-9 max-w-[100px]")}
             />
-            <span className="text-sm text-slate-500">%</span>
+            <span className={cn("text-sm", mutedText)}>%</span>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className={metaText}>
             {config.percentage > 0 && referenceCents > 0
               ? `${config.percentage}% de ${formatMoney(referenceCents)} = ${formatMoney(limitCents)}`
               : referenceCents <= 0
@@ -202,9 +191,9 @@ export function BudgetProgressSummary({
         <span
           className={cn(
             "text-xs font-normal",
-            light === "green" && "text-emerald-600",
-            light === "yellow" && "text-amber-600",
-            light === "red" && "text-red-600"
+            light === "green" && "text-emerald-700 dark:text-emerald-400",
+            light === "yellow" && "text-amber-700 dark:text-amber-400",
+            light === "red" && "text-red-700 dark:text-red-400"
           )}
         >
           {pct.toFixed(0)}%
@@ -220,24 +209,24 @@ export function BudgetProgressSummary({
               : undefined
         }
       />
-      <div className={cn("grid gap-1 text-sm text-slate-500", compact ? "grid-cols-1 sm:grid-cols-3" : "sm:grid-cols-3")}>
+      <div className={cn("grid gap-1 text-sm", mutedText, compact ? "grid-cols-1 sm:grid-cols-3" : "sm:grid-cols-3")}>
         <p>
-          <span className="text-slate-400">Asignado: </span>
+          <span className="font-medium">Asignado: </span>
           {formatMoney(limitCents)}
         </p>
         <p>
-          <span className="text-slate-400">{spentLabel}: </span>
+          <span className="font-medium">{spentLabel}: </span>
           {formatMoney(spentCents)}
         </p>
         <p>
-          <span className="text-slate-400">Restante: </span>
+          <span className="font-medium">Restante: </span>
           <span
             className={cn(
-              remainingCents < 0 && "font-medium text-red-600",
+              remainingCents < 0 && "font-medium text-red-700 dark:text-red-400",
               remainingCents >= 0 &&
                 remainingCents <= limitCents * 0.2 &&
                 limitCents > 0 &&
-                "font-medium text-amber-600"
+                "font-medium text-amber-700 dark:text-amber-400"
             )}
           >
             {formatMoney(remainingCents)}

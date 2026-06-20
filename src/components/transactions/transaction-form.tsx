@@ -14,6 +14,14 @@ import { SubcategoryCreateDialog } from "@/components/transactions/subcategory-c
 import { resolveTransactionCategorySelection } from "@/lib/categories/helpers";
 import { isCashAccountType } from "@/lib/data/accounts";
 import { parseMoneyInput } from "@/lib/format";
+import {
+  choiceCard,
+  choicePill,
+  emptyPanel,
+  errorText,
+  inlineAction,
+} from "@/lib/a11y";
+import { cn } from "@/lib/utils";
 import type {
   Account,
   AccountType,
@@ -74,7 +82,7 @@ function InlineCreateButton({
       type="button"
       variant="ghost"
       size="sm"
-      className="h-8 gap-1 px-2 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+      className={cn(inlineAction, "h-8 gap-1 px-2")}
       onClick={onClick}
       disabled={disabled}
     >
@@ -282,7 +290,7 @@ export function TransactionForm({
             )}
           </div>
           {categories.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
+            <p className={emptyPanel}>
               Todavía no tenés categorías de {categoryKindLabel}.
               {onCreateCategory
                 ? ' Tocá "Nueva" para crear una.'
@@ -295,11 +303,7 @@ export function TransactionForm({
                   key={c.id}
                   type="button"
                   onClick={() => handleParentCategoryChange(c.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    parentCategoryId === c.id
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-100 text-slate-700 dark:bg-slate-800"
-                  }`}
+                  className={choicePill(parentCategoryId === c.id)}
                   style={
                     parentCategoryId === c.id
                       ? undefined
@@ -329,11 +333,11 @@ export function TransactionForm({
             )}
           </div>
           {!parentCategoryId ? (
-            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
+            <p className={emptyPanel}>
               Seleccioná una categoría primero.
             </p>
           ) : subcategories.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
+            <p className={emptyPanel}>
               {selectedParent?.name} no tiene subcategorías.
               {onCreateSubcategory
                 ? ' Tocá "Nueva" para crear una.'
@@ -346,11 +350,7 @@ export function TransactionForm({
                   key={sub.id}
                   type="button"
                   onClick={() => setSubcategoryId(sub.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    subcategoryId === sub.id
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-100 text-slate-700 dark:bg-slate-800"
-                  }`}
+                  className={choicePill(subcategoryId === sub.id)}
                   style={
                     subcategoryId === sub.id
                       ? undefined
@@ -377,7 +377,7 @@ export function TransactionForm({
             )}
           </div>
           {selectableAccounts.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700">
+            <p className={emptyPanel}>
               Todavía no tenés cuentas.
               {onCreateAccount
                 ? ' Tocá "Nueva" para crear una.'
@@ -390,11 +390,7 @@ export function TransactionForm({
                   key={a.id}
                   type="button"
                   onClick={() => setAccountId(a.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
-                    accountId === a.id
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
-                  }`}
+                  className={choiceCard(accountId === a.id)}
                 >
                   <span
                     className="flex h-8 w-8 items-center justify-center rounded-lg"
@@ -424,7 +420,7 @@ export function TransactionForm({
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className={errorText}>{error}</p>}
 
         <Button type="submit" className="w-full" size="lg" disabled={saving}>
           {saving
@@ -437,7 +433,7 @@ export function TransactionForm({
         {mode === "edit" && onDelete && (
           <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
             {deleteError && (
-              <p className="text-sm text-red-600">{deleteError}</p>
+              <p className={errorText}>{deleteError}</p>
             )}
             <Button
               type="button"

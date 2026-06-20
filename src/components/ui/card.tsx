@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { mutedText } from "@/lib/a11y";
 
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -8,7 +9,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900",
+      "rounded-2xl border border-border/80 bg-card text-card-foreground shadow-sm",
       className
     )}
     {...props}
@@ -40,7 +41,7 @@ const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-sm text-slate-500", className)} {...props} />
+  <p ref={ref} className={cn("text-sm", mutedText, className)} {...props} />
 ));
 CardDescription.displayName = "CardDescription";
 

@@ -55,9 +55,9 @@ export function BudgetCategoryCard({
           <span
             className={cn(
               "text-xs font-normal",
-              pct < 80 && "text-emerald-600",
-              pct >= 80 && pct <= 100 && "text-amber-600",
-              pct > 100 && "text-red-600"
+              pct < 80 && "text-emerald-700 dark:text-emerald-400",
+              pct >= 80 && pct <= 100 && "text-amber-700 dark:text-amber-400",
+              pct > 100 && "text-red-700 dark:text-red-400"
             )}
           >
             {pct.toFixed(0)}%

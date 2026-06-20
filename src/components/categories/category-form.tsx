@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { CATEGORY_ICON_OPTIONS } from "@/constants/category-icons";
 import type { Category, CategoryType } from "@/types/database";
-import { cn } from "@/lib/utils";
+import { choiceIcon, errorText } from "@/lib/a11y";
 
 interface CategoryFormProps {
   mode: "create" | "edit";
@@ -120,12 +120,7 @@ export function CategoryForm({
               type="button"
               onClick={() => setIcon(option.icon)}
               title={option.label}
-              className={cn(
-                "flex h-11 items-center justify-center rounded-xl border transition-colors",
-                icon === option.icon
-                  ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
-              )}
+              className={choiceIcon(icon === option.icon)}
               style={
                 icon === option.icon
                   ? undefined
@@ -168,7 +163,7 @@ export function CategoryForm({
       {variant === "page" && mode === "edit" && onDelete && (
         <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
           {deleteError && (
-            <p className="text-sm text-red-600">{deleteError}</p>
+            <p className={errorText}>{deleteError}</p>
           )}
           <Button
             type="button"

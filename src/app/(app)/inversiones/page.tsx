@@ -36,7 +36,7 @@ export default function InversionesPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Inversiones</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Tu portafolio y movimientos de inversión.
           </p>
         </div>
@@ -48,7 +48,7 @@ export default function InversionesPage() {
         </Button>
       </header>
 
-      {loading && <p className="text-slate-500">Cargando…</p>}
+      {loading && <p className="text-muted-foreground">Cargando…</p>}
 
       {!loading && (
         <>
@@ -60,7 +60,7 @@ export default function InversionesPage() {
               <p className="text-3xl font-bold tabular-nums text-cyan-700">
                 {formatMoney(portfolio.totalMarketValueCents)}
               </p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Valor de mercado = monto invertido (precios en vivo próximamente)
               </p>
             </CardContent>
@@ -78,12 +78,12 @@ export default function InversionesPage() {
                       <span className="font-medium">
                         {holding.categoryName} · {holding.subcategoryName}
                       </span>
-                      <span className="text-slate-500">
+                      <span className="text-muted-foreground">
                         {holding.allocationPercent.toFixed(1)}%
                       </span>
                     </div>
                     <Progress value={holding.allocationPercent} className="h-2" />
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {formatMoney(holding.marketValueCents)}
                     </p>
                   </div>
@@ -95,7 +95,7 @@ export default function InversionesPage() {
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Historial</h2>
             {investments.length === 0 ? (
-              <p className="text-slate-500">No hay inversiones registradas.</p>
+              <p className="text-muted-foreground">No hay inversiones registradas.</p>
             ) : (
               <ul className="space-y-2">
                 {investments.map((t) => {
@@ -108,7 +108,7 @@ export default function InversionesPage() {
                           <p className="font-medium">
                             {t.description || "Inversión"}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             {format(new Date(t.transaction_date), "d MMM yyyy", {
                               locale: es,
                             })}
