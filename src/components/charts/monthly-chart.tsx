@@ -14,8 +14,8 @@ import type { ChartPoint } from "@/lib/finance/calculations";
 
 export function MonthlyChart({ data }: { data: ChartPoint[] }) {
   return (
-    <div className="h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-64 w-full min-w-0">
+      <ResponsiveContainer width="100%" height={256} minWidth={0}>
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
           <XAxis dataKey="label" tick={{ fontSize: 12 }} />
