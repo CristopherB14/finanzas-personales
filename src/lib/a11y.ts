@@ -53,7 +53,7 @@ export function choiceCard(selected: boolean) {
   return cn(
     interactive,
     focusRing,
-    "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium",
+    "flex w-full min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium",
     selected
       ? "border-accent bg-accent/10 text-accent dark:bg-accent/20"
       : "border-border bg-card text-foreground hover:bg-muted/60 active:bg-muted/80"

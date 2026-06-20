@@ -8,10 +8,10 @@ export default function AppLayout({
 }) {
   return (
     <SyncProvider>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen min-w-0 bg-background">
         <AppNav />
-        <main className="flex-1 pb-24 md:pb-0">
-          <div className="mx-auto max-w-5xl p-4 md:p-8">{children}</div>
+        <main className="min-w-0 flex-1 overflow-x-clip pb-24 md:pb-0">
+          <div className="mx-auto min-w-0 max-w-5xl p-4 md:p-8">{children}</div>
         </main>
       </div>
     </SyncProvider>

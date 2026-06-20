@@ -84,7 +84,11 @@ export function AccountForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={variant === "embedded" ? "space-y-5" : "mx-auto max-w-lg space-y-5"}
+      className={
+        variant === "embedded"
+          ? "min-w-0 space-y-5"
+          : "mx-auto min-w-0 w-full max-w-lg space-y-5"
+      }
     >
       {variant === "page" && <h1 className="text-2xl font-bold">{title}</h1>}
 
@@ -112,7 +116,7 @@ export function AccountForm({
 
       <div className="space-y-2">
         <Label>Tipo de cuenta</Label>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
           {ACCOUNT_TYPE_OPTIONS.map((option) => (
             <button
               key={option.type}
@@ -121,12 +125,12 @@ export function AccountForm({
               className={choiceCard(type === option.type)}
             >
               <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                 style={{ backgroundColor: `${option.color}20`, color: option.color }}
               >
                 <AccountIcon icon={option.icon} className="h-4 w-4" />
               </span>
-              {option.label}
+              <span className="min-w-0 flex-1 break-words">{option.label}</span>
             </button>
           ))}
         </div>
