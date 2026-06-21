@@ -15,7 +15,7 @@ import {
   saveLocalTransaction,
   updateLocalTransaction,
 } from "@/lib/db/local-db";
-import { onSyncComplete } from "@/lib/sync/sync-engine";
+import { onSyncComplete, notifySyncComplete } from "@/lib/sync/sync-engine";
 import type { LocalTransaction, TransactionType } from "@/types/database";
 
 export type TransactionInput = {
@@ -27,6 +27,9 @@ export type TransactionInput = {
   currency_code: string;
   transaction_date: string;
   description?: string;
+  client_id?: string;
+  recurring_expense_id?: string;
+  tags?: string[];
 };
 
 function sortTransactions(transactions: LocalTransaction[]) {
@@ -77,6 +80,7 @@ async function upsertRemoteTransaction(
       description: tx.description,
       tags: tx.tags,
       client_id: tx.client_id,
+      recurring_expense_id: tx.recurring_expense_id ?? null,
     },
     { onConflict: "user_id,client_id" }
   );
@@ -173,7 +177,7 @@ export function useTransactions(userId: string | undefined) {
   const addTransaction = async (input: TransactionInput) => {
     if (!userId) throw new Error("No autenticado");
 
-    const client_id = uuidv4();
+    const client_id = input.client_id ?? uuidv4();
     let investment_asset_id: string | null = null;
 
     if (input.type === "investment") {
@@ -198,7 +202,8 @@ export function useTransactions(userId: string | undefined) {
       currency_code: input.currency_code,
       transaction_date: input.transaction_date,
       description: input.description ?? null,
-      tags: [],
+      tags: input.tags ?? [],
+      recurring_expense_id: input.recurring_expense_id ?? null,
       updated_at: new Date().toISOString(),
       _syncStatus: "pending",
       _localOnly: true,
@@ -215,6 +220,7 @@ export function useTransactions(userId: string | undefined) {
       }
     }
 
+    notifySyncComplete();
     return tx;
   };
 

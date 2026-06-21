@@ -6,6 +6,7 @@ import { useOnline } from "@/hooks/use-online";
 import { ensureUserSetup } from "@/lib/data/seed-user";
 import { startAutoSync } from "@/lib/sync/sync-engine";
 import { OfflineBanner } from "@/components/layout/app-nav";
+import { RecurringExpenseProcessor } from "@/components/recurring/recurring-expense-processor";
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -31,6 +32,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       <OfflineBanner online={online} />
+      <RecurringExpenseProcessor />
       {children}
     </>
   );

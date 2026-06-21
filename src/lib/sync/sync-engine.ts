@@ -16,6 +16,10 @@ export function onSyncStateChange(cb: (state: SyncState) => void) {
   };
 }
 
+export function notifySyncComplete() {
+  notifyComplete();
+}
+
 export function onSyncComplete(cb: () => void) {
   completeListeners.push(cb);
   return () => {
@@ -80,6 +84,7 @@ export async function pushPendingChanges(userId: string): Promise<void> {
         description: tx.description,
         tags: tx.tags,
         client_id: tx.client_id,
+        recurring_expense_id: tx.recurring_expense_id ?? null,
       },
       { onConflict: "user_id,client_id" }
     );

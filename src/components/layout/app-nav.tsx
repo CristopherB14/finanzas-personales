@@ -14,6 +14,7 @@ import {
   Tags,
   LogOut,
   LineChart,
+  Repeat,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -38,6 +39,7 @@ const sidebarItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
   { href: "/gastos", label: "Gastos", icon: TrendingDown },
+  { href: "/gastos-recurrentes", label: "Recurrentes", icon: Repeat },
   { href: "/inversiones", label: "Inversiones", icon: LineChart },
   { href: "/transferencias", label: "Transferencias", icon: ArrowLeftRight },
   { href: "/flujo-de-caja", label: "Flujo de caja", icon: Activity },
