@@ -18,6 +18,10 @@ export default function NuevaInversionPage() {
     loading,
     addCategory,
     addSubcategory,
+    editCategory,
+    editSubcategory,
+    removeCategory,
+    removeSubcategory,
   } = useCategories(user?.id, transactions);
 
   const cashAccounts = accounts.filter((a) => isCashAccountType(a.type));
@@ -43,6 +47,10 @@ export default function NuevaInversionPage() {
       onCreateAccount={addAccount}
       onCreateCategory={(data) => addCategory({ ...data, type: "investment" })}
       onCreateSubcategory={(parentId, data) => addSubcategory(parentId, data)}
+      onEditCategory={editCategory}
+      onDeleteCategory={removeCategory}
+      onEditSubcategory={editSubcategory}
+      onDeleteSubcategory={removeSubcategory}
     />
   );
 }

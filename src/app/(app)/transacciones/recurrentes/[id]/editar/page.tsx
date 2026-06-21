@@ -3,27 +3,27 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { TransactionForm } from "@/components/transactions/transaction-form";
+import { RecurringExpenseForm } from "@/components/recurring/recurring-expense-form";
+import { ROUTES } from "@/constants/routes";
 import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
-import { isCashAccountType } from "@/lib/data/accounts";
+import { useRecurringExpenses } from "@/hooks/use-recurring-expenses";
 
-export default function EditarInversionPage({
+export default function EditarTransaccionRecurrentePage({
   params,
 }: {
-  params: Promise<{ clientId: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { clientId } = use(params);
+  const { id } = use(params);
   const router = useRouter();
   const { user } = useUser();
-  const { transactions, loading, editTransaction, removeTransaction, getTransactionByClientId } =
-    useTransactions(user?.id);
+  const { transactions } = useTransactions(user?.id);
   const { accounts, addAccount } = useAccounts(user?.id);
   const {
     categories,
-    investmentCategories,
+    expenseCategories,
     getSubcategoriesFor,
     addCategory,
     addSubcategory,
@@ -32,45 +32,48 @@ export default function EditarInversionPage({
     removeCategory,
     removeSubcategory,
   } = useCategories(user?.id, transactions);
+  const {
+    loading,
+    getRecurringById,
+    editRecurringExpense,
+    removeRecurringExpense,
+  } = useRecurringExpenses(user?.id);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const transaction = getTransactionByClientId(clientId);
-  const cashAccounts = accounts.filter((a) => isCashAccountType(a.type));
+  const expense = getRecurringById(id);
 
   if (!user) return <p>Iniciá sesión para continuar.</p>;
+  if (loading) return <p className="text-muted-foreground">Cargando…</p>;
 
-  if (loading) {
-    return <p className="text-muted-foreground">Cargando…</p>;
-  }
-
-  if (!transaction || transaction.type !== "investment") {
+  if (!expense) {
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground">No se encontró la inversión.</p>
-        <Link href="/inversiones" className="text-emerald-700 hover:underline">
-          Volver a inversiones
+        <p className="text-muted-foreground">
+          No se encontró el gasto recurrente.
+        </p>
+        <Link href={ROUTES.transactions} className="text-accent hover:underline">
+          Volver a transacciones
         </Link>
       </div>
     );
   }
 
   return (
-    <TransactionForm
-      key={transaction.client_id}
+    <RecurringExpenseForm
+      key={expense.id}
       mode="edit"
-      type="investment"
-      initial={transaction}
-      accounts={cashAccounts}
-      categories={investmentCategories}
+      initial={expense}
+      accounts={accounts}
+      categories={expenseCategories}
       allCategories={categories}
       getSubcategoriesFor={getSubcategoriesFor}
-      currency={transaction.currency_code}
+      currency={expense.currency_code}
       deleteError={deleteError}
       onSubmit={async (data) => {
-        await editTransaction(clientId, data);
+        await editRecurringExpense(id, data);
       }}
       onCreateAccount={addAccount}
-      onCreateCategory={(data) => addCategory({ ...data, type: "investment" })}
+      onCreateCategory={(data) => addCategory(data)}
       onCreateSubcategory={(parentId, data) => addSubcategory(parentId, data)}
       onEditCategory={editCategory}
       onDeleteCategory={removeCategory}
@@ -79,11 +82,11 @@ export default function EditarInversionPage({
       onDelete={async () => {
         setDeleteError(null);
         try {
-          await removeTransaction(clientId);
-          router.push("/inversiones");
+          await removeRecurringExpense(id);
+          router.push(ROUTES.transactions);
           router.refresh();
         } catch {
-          setDeleteError("No se pudo eliminar la inversión.");
+          setDeleteError("No se pudo eliminar el gasto recurrente.");
         }
       }}
     />

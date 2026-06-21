@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { AccountCreateDialog } from "@/components/transactions/account-create-dialog";
-import { CategoryCreateDialog } from "@/components/transactions/category-create-dialog";
-import { SubcategoryCreateDialog } from "@/components/transactions/subcategory-create-dialog";
+import { CategoryFieldGroup } from "@/components/transactions/category-field-group";
+import { ROUTES } from "@/constants/routes";
 import { resolveTransactionCategorySelection } from "@/lib/categories/helpers";
 import { parseMoneyInput } from "@/lib/format";
 import {
@@ -65,6 +65,22 @@ interface RecurringExpenseFormProps {
     parentId: string,
     data: { name: string; icon?: string; color?: string }
   ) => Promise<Category>;
+  onEditCategory?: (
+    categoryId: string,
+    data: { name: string; icon?: string; color?: string }
+  ) => Promise<Category>;
+  onDeleteCategory?: (
+    categoryId: string
+  ) => Promise<
+    { ok: true } | { ok: false; reason: "has_transactions" | "has_subcategories" }
+  >;
+  onEditSubcategory?: (
+    subcategoryId: string,
+    data: { name: string; icon?: string; color?: string }
+  ) => Promise<Category>;
+  onDeleteSubcategory?: (
+    subcategoryId: string
+  ) => Promise<{ ok: true } | { ok: false; reason: "has_transactions" }>;
   onDelete?: () => Promise<void>;
   deleteError?: string | null;
 }
@@ -147,6 +163,10 @@ export function RecurringExpenseForm({
   onCreateAccount,
   onCreateCategory,
   onCreateSubcategory,
+  onEditCategory,
+  onDeleteCategory,
+  onEditSubcategory,
+  onDeleteSubcategory,
   onDelete,
   deleteError,
 }: RecurringExpenseFormProps) {
@@ -198,18 +218,6 @@ export function RecurringExpenseForm({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [subcategoryDialogOpen, setSubcategoryDialogOpen] = useState(false);
-
-  const subcategories = useMemo(
-    () => (parentCategoryId ? getSubcategoriesFor(parentCategoryId) : []),
-    [getSubcategoriesFor, parentCategoryId]
-  );
-
-  const selectedParent = useMemo(
-    () => categories.find((c) => c.id === parentCategoryId),
-    [categories, parentCategoryId]
-  );
 
   const title =
     mode === "create" ? "Nuevo gasto recurrente" : "Editar gasto recurrente";
@@ -276,7 +284,7 @@ export function RecurringExpenseForm({
         notes: notes.trim() || null,
         is_active: isActive,
       });
-      router.push("/gastos-recurrentes");
+      router.push(ROUTES.transactions);
       router.refresh();
     } finally {
       setSaving(false);
@@ -323,86 +331,22 @@ export function RecurringExpenseForm({
           />
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label>Categoría</Label>
-            {onCreateCategory && (
-              <InlineCreateButton
-                label="Nueva"
-                onClick={() => setCategoryDialogOpen(true)}
-              />
-            )}
-          </div>
-          {categories.length === 0 ? (
-            <p className={emptyPanel}>
-              Todavía no tenés categorías de gasto.
-              {onCreateCategory
-                ? ' Tocá "Nueva" para crear una.'
-                : " Creá una desde Categorías."}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => handleParentCategoryChange(c.id)}
-                  className={choicePill(parentCategoryId === c.id)}
-                  style={
-                    parentCategoryId === c.id
-                      ? undefined
-                      : { borderLeft: `3px solid ${c.color ?? "#64748b"}` }
-                  }
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label>Subcategoría</Label>
-            {onCreateSubcategory && selectedParent && (
-              <InlineCreateButton
-                label="Nueva"
-                onClick={() => setSubcategoryDialogOpen(true)}
-                disabled={!parentCategoryId}
-              />
-            )}
-          </div>
-          {!parentCategoryId ? (
-            <p className={emptyPanel}>Seleccioná una categoría primero.</p>
-          ) : subcategories.length === 0 ? (
-            <p className={emptyPanel}>
-              {selectedParent?.name} no tiene subcategorías.
-              {onCreateSubcategory
-                ? ' Tocá "Nueva" para crear una.'
-                : " Creá una desde Categorías."}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {subcategories.map((sub) => (
-                <button
-                  key={sub.id}
-                  type="button"
-                  onClick={() => setSubcategoryId(sub.id)}
-                  className={choicePill(subcategoryId === sub.id)}
-                  style={
-                    subcategoryId === sub.id
-                      ? undefined
-                      : {
-                          borderLeft: `3px solid ${sub.color ?? selectedParent?.color ?? "#64748b"}`,
-                        }
-                  }
-                >
-                  {sub.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <CategoryFieldGroup
+          categoryType="expense"
+          categories={categories}
+          getSubcategoriesFor={getSubcategoriesFor}
+          parentCategoryId={parentCategoryId}
+          subcategoryId={subcategoryId}
+          onParentChange={handleParentCategoryChange}
+          onSubcategoryChange={setSubcategoryId}
+          categoryKindLabel="gasto"
+          onCreateCategory={onCreateCategory}
+          onEditCategory={onEditCategory}
+          onDeleteCategory={onDeleteCategory}
+          onCreateSubcategory={onCreateSubcategory}
+          onEditSubcategory={onEditSubcategory}
+          onDeleteSubcategory={onDeleteSubcategory}
+        />
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -592,26 +536,6 @@ export function RecurringExpenseForm({
           onOpenChange={setAccountDialogOpen}
           onCreate={onCreateAccount}
           onCreated={(account) => setAccountId(account.id)}
-        />
-      )}
-
-      {onCreateCategory && (
-        <CategoryCreateDialog
-          open={categoryDialogOpen}
-          onOpenChange={setCategoryDialogOpen}
-          type="expense"
-          onCreate={onCreateCategory}
-          onCreated={(category) => handleParentCategoryChange(category.id)}
-        />
-      )}
-
-      {onCreateSubcategory && selectedParent && (
-        <SubcategoryCreateDialog
-          open={subcategoryDialogOpen}
-          onOpenChange={setSubcategoryDialogOpen}
-          parentCategory={selectedParent}
-          onCreate={(data) => onCreateSubcategory(selectedParent.id, data)}
-          onCreated={(subcategory) => setSubcategoryId(subcategory.id)}
         />
       )}
     </>

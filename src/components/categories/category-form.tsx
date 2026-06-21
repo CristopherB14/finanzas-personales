@@ -72,7 +72,7 @@ export function CategoryForm({
       if (variant === "embedded") {
         onSuccess?.();
       } else {
-        router.push("/categorias");
+        router.push("/transacciones");
         router.refresh();
       }
     } finally {
@@ -159,6 +159,24 @@ export function CategoryForm({
               : "Guardar cambios"}
         </Button>
       </div>
+
+      {variant === "embedded" && mode === "edit" && onDelete && (
+        <div className="space-y-2 border-t border-slate-200 pt-2 dark:border-slate-800">
+          {deleteError && (
+            <p className={errorText}>{deleteError}</p>
+          )}
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full"
+            size="sm"
+            disabled={deleting}
+            onClick={handleDelete}
+          >
+            {deleting ? "Eliminando…" : "Eliminar categoría"}
+          </Button>
+        </div>
+      )}
 
       {variant === "page" && mode === "edit" && onDelete && (
         <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">

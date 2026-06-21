@@ -47,9 +47,9 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
         </div>
         <Button asChild className="hidden md:inline-flex">
-          <Link href="/gastos/nuevo">
+          <Link href="/transacciones/nuevo">
             <Plus className="h-4 w-4" />
-            Registrar gasto
+            Nueva transacción
           </Link>
         </Button>
       </header>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
               Empezá registrando tu primer gasto, ingreso o inversión.
             </p>
             <Button asChild className="mt-4">
-              <Link href="/gastos/nuevo">Registrar gasto</Link>
+              <Link href="/transacciones/nuevo">Nueva transacción</Link>
             </Button>
           </CardContent>
         </Card>

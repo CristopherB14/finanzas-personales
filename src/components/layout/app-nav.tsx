@@ -4,19 +4,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  TrendingDown,
-  TrendingUp,
   PiggyBank,
   Plus,
   Wallet,
   ArrowLeftRight,
   Activity,
-  Tags,
   LogOut,
   LineChart,
-  Repeat,
+  ArrowRightLeft,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { ROUTES } from "@/constants/routes";
 import {
   brandLink,
   ghostActionButton,
@@ -28,25 +26,34 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/gastos", label: "Gastos", icon: TrendingDown },
-  { href: "/gastos/nuevo", label: "Agregar", icon: Plus, highlight: true },
-  { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
+  { href: ROUTES.transactions, label: "Transacciones", icon: ArrowRightLeft },
+  { href: ROUTES.newTransaction, label: "Agregar", icon: Plus, highlight: true },
   { href: "/cuentas", label: "Cuentas", icon: Wallet },
   { href: "/presupuesto", label: "Presupuesto", icon: PiggyBank },
 ];
 
 const sidebarItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
-  { href: "/gastos", label: "Gastos", icon: TrendingDown },
-  { href: "/gastos-recurrentes", label: "Recurrentes", icon: Repeat },
+  { href: ROUTES.transactions, label: "Transacciones", icon: ArrowRightLeft },
   { href: "/inversiones", label: "Inversiones", icon: LineChart },
   { href: "/transferencias", label: "Transferencias", icon: ArrowLeftRight },
   { href: "/flujo-de-caja", label: "Flujo de caja", icon: Activity },
   { href: "/cuentas", label: "Cuentas", icon: Wallet },
-  { href: "/categorias", label: "Categorías", icon: Tags },
   { href: "/presupuesto", label: "Presupuesto", icon: PiggyBank },
 ];
+
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === ROUTES.transactions) {
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`) ||
+      pathname.startsWith("/gastos") ||
+      pathname.startsWith("/ingresos") ||
+      pathname.startsWith("/gastos-recurrentes")
+    );
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AppNav() {
   const pathname = usePathname();
@@ -67,8 +74,7 @@ export function AppNav() {
         </Link>
         <nav className="flex flex-col gap-1" aria-label="Navegación principal">
           {sidebarItems.map(({ href, label, icon: Icon }) => {
-            const active =
-              pathname === href || pathname.startsWith(href + "/");
+            const active = isNavActive(pathname, href);
 
             return (
               <Link
@@ -83,9 +89,9 @@ export function AppNav() {
             );
           })}
         </nav>
-        <Link href="/gastos/nuevo" className={cn(primaryActionLink, "mt-6")}>
+        <Link href={ROUTES.newTransaction} className={cn(primaryActionLink, "mt-6")}>
           <Plus className="h-4 w-4" aria-hidden />
-          Registrar gasto
+          Nueva transacción
         </Link>
         <button
           type="button"
@@ -103,7 +109,7 @@ export function AppNav() {
       >
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
           {navItems.map(({ href, label, icon: Icon, highlight }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
+            const active = isNavActive(pathname, href);
 
             return (
               <Link

@@ -68,7 +68,7 @@ export function SubcategoryForm({
       if (variant === "embedded") {
         onSuccess?.();
       } else {
-        router.push("/categorias");
+        router.push("/transacciones");
         router.refresh();
       }
     } finally {

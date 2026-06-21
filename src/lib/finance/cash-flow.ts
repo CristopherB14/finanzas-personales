@@ -1,4 +1,5 @@
 import { format, subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
+import { ROUTES } from "@/constants/routes";
 import type { Transaction, TransactionType } from "@/types/database";
 
 export type CashFlowTypeFilter =
@@ -149,12 +150,13 @@ export function buildCashFlowRows(
 export function cashFlowEditPath(transaction: Transaction): string {
   switch (transaction.type as TransactionType) {
     case "income":
-      return `/ingresos/${transaction.client_id}/editar`;
+    case "expense":
+      return ROUTES.editTransaction(transaction.client_id);
     case "investment":
       return `/inversiones/${transaction.client_id}/editar`;
     case "transfer":
       return `/transferencias/${transaction.client_id}/editar`;
     default:
-      return `/gastos/${transaction.client_id}/editar`;
+      return ROUTES.editTransaction(transaction.client_id);
   }
 }
