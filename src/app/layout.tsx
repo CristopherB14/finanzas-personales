@@ -42,8 +42,10 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-sans">{children}</body>
-      <RegisterSW />
+      <body className="min-h-full font-sans" suppressHydrationWarning>
+        {children}
+        <RegisterSW />
+      </body>
     </html>
   );
 }
