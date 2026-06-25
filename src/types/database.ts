@@ -80,6 +80,7 @@ export interface Transaction {
   description: string | null;
   tags: string[];
   client_id: string;
+  google_event_id?: string | null;
   updated_at: string;
   created_at?: string;
 }
@@ -122,6 +123,16 @@ export interface BudgetLine {
   budget_id: string;
   category_id: string;
   limit_cents: number;
+}
+
+export interface UserGoogleIntegration {
+  user_id: string;
+  access_token: string;
+  refresh_token: string;
+  expiry_date: number;
+  calendar_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export type SyncStatus = "synced" | "pending" | "error";

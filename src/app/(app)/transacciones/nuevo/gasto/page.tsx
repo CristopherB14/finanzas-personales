@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
+import { useGoogleCalendar } from "@/hooks/use-google-calendar";
 
 export default function NuevaTransaccionGastoPage() {
   const { user } = useUser();
@@ -24,6 +25,7 @@ export default function NuevaTransaccionGastoPage() {
     removeCategory,
     removeSubcategory,
   } = useCategories(user?.id, transactions);
+  const { connected: googleCalendarConnected } = useGoogleCalendar();
 
   if (!user) return <p>Iniciá sesión para continuar.</p>;
   if (loading) return <p className="text-muted-foreground">Cargando…</p>;
@@ -52,6 +54,7 @@ export default function NuevaTransaccionGastoPage() {
         onDeleteCategory={removeCategory}
         onEditSubcategory={editSubcategory}
         onDeleteSubcategory={removeSubcategory}
+        googleCalendarConnected={googleCalendarConnected}
       />
     </div>
   );

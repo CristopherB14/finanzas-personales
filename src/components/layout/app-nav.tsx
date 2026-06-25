@@ -12,6 +12,7 @@ import {
   LogOut,
   LineChart,
   ArrowRightLeft,
+  Plug,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ROUTES } from "@/constants/routes";
@@ -40,6 +41,7 @@ const sidebarItems = [
   { href: "/flujo-de-caja", label: "Flujo de caja", icon: Activity },
   { href: "/cuentas", label: "Cuentas", icon: Wallet },
   { href: "/presupuesto", label: "Presupuesto", icon: PiggyBank },
+  { href: ROUTES.integrations, label: "Integraciones", icon: Plug },
 ];
 
 function isNavActive(pathname: string, href: string): boolean {

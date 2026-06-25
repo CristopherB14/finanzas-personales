@@ -8,6 +8,7 @@ import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
 import { useRecurringExpenses } from "@/hooks/use-recurring-expenses";
+import { useGoogleCalendar } from "@/hooks/use-google-calendar";
 
 export default function NuevaTransaccionRecurrentePage() {
   const { user } = useUser();
@@ -26,6 +27,7 @@ export default function NuevaTransaccionRecurrentePage() {
     removeSubcategory,
   } = useCategories(user?.id, transactions);
   const { addRecurringExpense } = useRecurringExpenses(user?.id);
+  const { connected: googleCalendarConnected } = useGoogleCalendar();
 
   if (!user) return <p>Iniciá sesión para continuar.</p>;
   if (loading) return <p className="text-muted-foreground">Cargando…</p>;
@@ -52,6 +54,7 @@ export default function NuevaTransaccionRecurrentePage() {
         onDeleteCategory={removeCategory}
         onEditSubcategory={editSubcategory}
         onDeleteSubcategory={removeSubcategory}
+        googleCalendarConnected={googleCalendarConnected}
       />
     </div>
   );

@@ -21,6 +21,11 @@ import {
   inlineAction,
 } from "@/lib/a11y";
 import { cn } from "@/lib/utils";
+import { SyncToGoogleCalendarField } from "@/components/google-calendar/sync-to-google-calendar-field";
+import {
+  getTransactionTitle,
+  syncToGoogleCalendar,
+} from "@/lib/google-calendar/sync";
 import type {
   Account,
   AccountType,
@@ -75,6 +80,7 @@ interface TransactionFormProps {
     subcategoryId: string
   ) => Promise<{ ok: true } | { ok: false; reason: "has_transactions" }>;
   listPath?: string;
+  googleCalendarConnected?: boolean;
   onDelete?: () => Promise<void>;
   deleteError?: string | null;
 }
@@ -126,6 +132,7 @@ export function TransactionForm({
   onEditSubcategory,
   onDeleteSubcategory,
   listPath,
+  googleCalendarConnected = false,
   onDelete,
   deleteError,
 }: TransactionFormProps) {
@@ -165,6 +172,8 @@ export function TransactionForm({
   const [description, setDescription] = useState(
     () => initial?.description ?? ""
   );
+  const [syncToGoogleCalendarEnabled, setSyncToGoogleCalendarEnabled] =
+    useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,7 +238,7 @@ export function TransactionForm({
 
     setSaving(true);
     try {
-      await onSubmit({
+      const tx = await onSubmit({
         account_id: accountId,
         category_id: subcategoryId,
         type,
@@ -238,6 +247,37 @@ export function TransactionForm({
         transaction_date: date,
         description: description || undefined,
       });
+
+      if (
+        mode === "create" &&
+        syncToGoogleCalendarEnabled &&
+        googleCalendarConnected &&
+        (type === "income" || type === "expense")
+      ) {
+        try {
+          await syncToGoogleCalendar({
+            title: getTransactionTitle(
+              allCategories,
+              subcategoryId,
+              description
+            ),
+            description: description || undefined,
+            amount: cents,
+            currency,
+            date,
+            type,
+            client_id: tx?.client_id,
+          });
+        } catch (syncError) {
+          setError(
+            syncError instanceof Error
+              ? syncError.message
+              : "No se pudo sincronizar con Google Calendar."
+          );
+          return;
+        }
+      }
+
       router.push(resolvedListPath);
       router.refresh();
     } finally {
@@ -357,6 +397,15 @@ export function TransactionForm({
             }
           />
         </div>
+
+        {mode === "create" &&
+          googleCalendarConnected &&
+          (type === "income" || type === "expense") && (
+            <SyncToGoogleCalendarField
+              value={syncToGoogleCalendarEnabled}
+              onChange={setSyncToGoogleCalendarEnabled}
+            />
+          )}
 
         {error && <p className={errorText}>{error}</p>}
 

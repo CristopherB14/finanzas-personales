@@ -16,6 +16,7 @@ import { parseMoneyInput } from "@/lib/format";
 import {
   CUSTOM_UNIT_OPTIONS,
   FREQUENCY_OPTIONS,
+  frequencyToRule,
   inferCustomInterval,
   inferCustomUnit,
 } from "@/lib/recurrence/engine";
@@ -29,6 +30,8 @@ import {
   selectField,
 } from "@/lib/a11y";
 import { cn } from "@/lib/utils";
+import { SyncToGoogleCalendarField } from "@/components/google-calendar/sync-to-google-calendar-field";
+import { syncToGoogleCalendar } from "@/lib/google-calendar/sync";
 import type {
   Account,
   AccountType,
@@ -83,6 +86,7 @@ interface RecurringExpenseFormProps {
   ) => Promise<{ ok: true } | { ok: false; reason: "has_transactions" }>;
   onDelete?: () => Promise<void>;
   deleteError?: string | null;
+  googleCalendarConnected?: boolean;
 }
 
 function formatAmountInput(cents: number): string {
@@ -169,6 +173,7 @@ export function RecurringExpenseForm({
   onDeleteSubcategory,
   onDelete,
   deleteError,
+  googleCalendarConnected = false,
 }: RecurringExpenseFormProps) {
   const router = useRouter();
   const initialSelection = useMemo(
@@ -214,6 +219,8 @@ export function RecurringExpenseForm({
   );
   const [isActive, setIsActive] = useState(() => initial?.is_active ?? true);
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [syncToGoogleCalendarEnabled, setSyncToGoogleCalendarEnabled] =
+    useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -284,6 +291,37 @@ export function RecurringExpenseForm({
         notes: notes.trim() || null,
         is_active: isActive,
       });
+
+      if (mode === "create" && syncToGoogleCalendarEnabled && googleCalendarConnected) {
+        const recurrenceRule = frequencyToRule(
+          frequency,
+          customInterval,
+          customUnit
+        );
+        if (endDate) {
+          recurrenceRule.until = endDate;
+        }
+
+        try {
+          await syncToGoogleCalendar({
+            title: name.trim(),
+            description: notes.trim() || undefined,
+            amount: cents,
+            currency,
+            date: startDate,
+            type: "recurring",
+            recurrence: recurrenceRule,
+          });
+        } catch (syncError) {
+          setError(
+            syncError instanceof Error
+              ? syncError.message
+              : "No se pudo sincronizar con Google Calendar."
+          );
+          return;
+        }
+      }
+
       router.push(ROUTES.transactions);
       router.refresh();
     } finally {
@@ -503,6 +541,13 @@ export function RecurringExpenseForm({
             placeholder="Detalles adicionales"
           />
         </div>
+
+        {mode === "create" && googleCalendarConnected && (
+          <SyncToGoogleCalendarField
+            value={syncToGoogleCalendarEnabled}
+            onChange={setSyncToGoogleCalendarEnabled}
+          />
+        )}
 
         {error && <p className={errorText}>{error}</p>}
 

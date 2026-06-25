@@ -7,4 +7,5 @@ export const ROUTES = {
   editTransaction: (clientId: string) =>
     `/transacciones/${clientId}/editar`,
   editRecurring: (id: string) => `/transacciones/recurrentes/${id}/editar`,
+  integrations: "/integraciones",
 } as const;
