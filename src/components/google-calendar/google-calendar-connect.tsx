@@ -13,7 +13,7 @@ const GOOGLE_OAUTH_ERROR_MESSAGES: Record<string, string> = {
   token_storage_failed:
     "Google autorizó la conexión, pero no se pudieron guardar los tokens. Revisá SUPABASE_SERVICE_ROLE_KEY.",
   storage_not_configured:
-    "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor. Agregala en .env.local para guardar los tokens de Google.",
+    "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor. Configurala en las variables de entorno.",
   invalid_state: "La sesión OAuth expiró o es inválida. Intentá conectar de nuevo.",
   missing_code: "Google no devolvió un código de autorización.",
   access_denied: "Acceso denegado en Google.",

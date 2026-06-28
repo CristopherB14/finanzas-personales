@@ -26,7 +26,7 @@
 
 1. Crear proyecto en [Supabase](https://supabase.com).
 2. Ejecutar `supabase/migrations/20250602000000_initial_schema.sql` en el SQL Editor.
-3. Copiar `.env.example` → `.env.local` con URL y anon key.
+3. Configurar `.env.local` con las variables de entorno (ver [ARCHITECTURE.md](ARCHITECTURE.md#despliegue)).
 4. `npm run dev` → http://localhost:3000
 
 ## KPIs MVP

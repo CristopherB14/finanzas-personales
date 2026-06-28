@@ -132,4 +132,10 @@ sequenceDiagram
 
 - **Web/PWA**: Vercel o similar + dominio custom.
 - **Supabase**: proyecto dedicado por entorno (dev/staging/prod).
-- **Variables**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- **Variables** (mismas claves en `.env` y `.env.local`; solo `GOOGLE_REDIRECT_URI` difiere por entorno):
+  - `NEXT_PUBLIC_SUPABASE_URL` — URL del proyecto Supabase
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — clave anon/publica de Supabase
+  - `SUPABASE_SERVICE_ROLE_KEY` — clave service role (solo servidor; tokens OAuth de Google Calendar)
+  - `GOOGLE_CLIENT_ID` — OAuth client ID de Google Cloud
+  - `GOOGLE_CLIENT_SECRET` — OAuth client secret (solo servidor)
+  - `GOOGLE_REDIRECT_URI` — callback OAuth (`http://localhost:3000/...` en local; dominio de producción en `.env`)

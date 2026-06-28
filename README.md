@@ -31,8 +31,10 @@ Aplicación web **offline-first** para gestionar ingresos, gastos, presupuesto y
 ## Inicio rápido
 
 ```bash
-cp .env.example .env.local
-# Completar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Crear .env.local con las variables requeridas (ver docs/ARCHITECTURE.md):
+# NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+# GOOGLE_REDIRECT_URI (localhost en local; dominio de producción en .env)
 
 # En Supabase SQL Editor, ejecutar:
 # supabase/migrations/20250602000000_initial_schema.sql
