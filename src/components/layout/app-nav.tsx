@@ -16,8 +16,9 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ROUTES } from "@/constants/routes";
+import { BrandLogo } from "@/components/layout/brand-logo";
+import { UserAccountIndicator } from "@/components/layout/user-account-indicator";
 import {
-  brandLink,
   ghostActionButton,
   mobileNavLink,
   navLink,
@@ -70,46 +71,49 @@ export function AppNav() {
 
   return (
     <>
-      <aside className="hidden w-56 shrink-0 border-r border-border bg-card p-4 md:block">
-        <Link href="/dashboard" className={cn(brandLink, "mb-8 block px-2 text-lg")}>
-          Mis Finanzas
-        </Link>
-        <nav className="flex flex-col gap-1" aria-label="Navegación principal">
-          {sidebarItems.map(({ href, label, icon: Icon }) => {
-            const active = isNavActive(pathname, href);
+      <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:block">
+        <div className="flex h-full flex-col p-4">
+          <BrandLogo href="/dashboard" className="mb-4 px-1" size="md" />
+          <UserAccountIndicator variant="sidebar" className="mb-5" />
+          <nav className="flex flex-1 flex-col gap-0.5" aria-label="Navegación principal">
+            {sidebarItems.map(({ href, label, icon: Icon }) => {
+              const active = isNavActive(pathname, href);
 
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={navLink(active)}
-              >
-                <Icon className="h-5 w-5" aria-hidden />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-        <Link href={ROUTES.newTransaction} className={cn(primaryActionLink, "mt-6")}>
-          <Plus className="h-4 w-4" aria-hidden />
-          Nueva transacción
-        </Link>
-        <button
-          type="button"
-          onClick={() => void handleLogout()}
-          className={cn(ghostActionButton, "mt-2")}
-        >
-          <LogOut className="h-4 w-4" aria-hidden />
-          Cerrar sesión
-        </button>
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={navLink(active)}
+                >
+                  <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-4 space-y-1 border-t border-border pt-4">
+            <Link href={ROUTES.newTransaction} className={primaryActionLink}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Nueva transacción
+            </Link>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className={ghostActionButton}
+            >
+              <LogOut className="h-4 w-4" aria-hidden />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
       </aside>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
         aria-label="Navegación móvil"
       >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
+        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
           {navItems.map(({ href, label, icon: Icon, highlight }) => {
             const active = isNavActive(pathname, href);
 
@@ -120,7 +124,7 @@ export function AppNav() {
                 aria-current={active ? "page" : undefined}
                 aria-label={highlight ? label : undefined}
                 className={cn(
-                  "flex flex-1",
+                  "flex min-h-11 min-w-11 flex-1",
                   mobileNavLink(active, highlight)
                 )}
               >
@@ -140,7 +144,7 @@ export function OfflineBanner({ online }: { online: boolean }) {
   return (
     <div
       role="status"
-      className="bg-amber-600 px-4 py-2 text-center text-sm font-medium text-white"
+      className="bg-warning px-4 py-2.5 text-center text-sm font-medium text-warning-foreground"
     >
       Sin conexión — tus cambios se guardan en este dispositivo
     </div>

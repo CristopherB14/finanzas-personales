@@ -1,6 +1,6 @@
-# Mis Finanzas — Finanzas Personales Integral
+# Klaro — Finanzas personales claras
 
-Aplicación web **offline-first** para gestionar ingresos, gastos, presupuesto y situación financiera personal. Pensada para personas comunes, no para analistas financieros.
+**Klaro** es una aplicación web **offline-first** para gestionar ingresos, gastos, presupuesto y situación financiera personal. Pensada para personas comunes, no para analistas financieros.
 
 ## Características (MVP)
 

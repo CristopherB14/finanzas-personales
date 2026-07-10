@@ -194,9 +194,9 @@ export default function FlujoDeCajaPage() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground dark:bg-slate-900">
+          <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Fecha</th>
               <th className="px-4 py-3">Descripción</th>
@@ -211,8 +211,8 @@ export default function FlujoDeCajaPage() {
               <tr
                 key={transaction.client_id}
                 className={cn(
-                  "border-t border-slate-100 dark:border-slate-800",
-                  isFuture && "bg-slate-50/80 dark:bg-slate-900/50"
+                  "border-t border-border",
+                  isFuture && "bg-muted/30"
                 )}
               >
                 <td className="px-4 py-3 whitespace-nowrap">
@@ -220,7 +220,7 @@ export default function FlujoDeCajaPage() {
                     locale: es,
                   })}
                   {isFuture && (
-                    <span className="ml-2 text-xs text-amber-700 dark:text-amber-400">
+                    <span className="ml-2 text-xs text-warning">
                       Futuro
                     </span>
                   )}
@@ -256,8 +256,8 @@ export default function FlujoDeCajaPage() {
                     transaction.type === "transfer"
                       ? "text-sky-700 dark:text-sky-400"
                       : deltaCents >= 0
-                        ? "text-emerald-700 dark:text-emerald-400"
-                        : "text-red-700 dark:text-red-400"
+                        ? "text-success"
+                        : "text-destructive"
                   )}
                 >
                   {transaction.type === "transfer" ? (
@@ -273,8 +273,8 @@ export default function FlujoDeCajaPage() {
                   className={cn(
                     "px-4 py-3 text-right font-semibold tabular-nums",
                     runningBalanceCents >= 0
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-red-700 dark:text-red-400"
+                      ? "text-success"
+                      : "text-destructive"
                   )}
                 >
                   {formatMoney(runningBalanceCents, transaction.currency_code)}

@@ -164,7 +164,7 @@ export function AccountForm({
       </div>
 
       {variant === "page" && mode === "edit" && onDelete && (
-        <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
+        <div className="space-y-2 border-t border-border pt-4">
           {deleteError && (
             <p className={errorText}>{deleteError}</p>
           )}

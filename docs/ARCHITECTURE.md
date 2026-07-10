@@ -1,4 +1,4 @@
-# Arquitectura — Finanzas Personales
+# Arquitectura — Klaro
 
 ## Visión
 

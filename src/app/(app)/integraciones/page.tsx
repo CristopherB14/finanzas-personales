@@ -2,16 +2,16 @@
 
 import { Suspense } from "react";
 import { GoogleCalendarConnect } from "@/components/google-calendar/google-calendar-connect";
+import { PageHeader } from "@/components/layout/page-header";
+import { LoadingState } from "@/components/ui/loading-state";
 
 function IntegracionesContent() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Integraciones</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Conectá servicios externos para enriquecer tu experiencia.
-        </p>
-      </div>
+      <PageHeader
+        title="Integraciones"
+        description="Conectá servicios externos para enriquecer tu experiencia."
+      />
       <GoogleCalendarConnect />
     </div>
   );
@@ -19,7 +19,7 @@ function IntegracionesContent() {
 
 export default function IntegracionesPage() {
   return (
-    <Suspense fallback={<p className="text-muted-foreground">Cargando…</p>}>
+    <Suspense fallback={<LoadingState label="Cargando integraciones…" />}>
       <IntegracionesContent />
     </Suspense>
   );

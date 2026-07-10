@@ -1,35 +1,84 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { RegisterSW } from "@/components/pwa/register-sw";
+import {
+  BRAND_DESCRIPTION,
+  BRAND_NAME,
+  BRAND_SHORT_DESCRIPTION,
+  BRAND_TAGLINE,
+  getSiteUrl,
+} from "@/lib/brand";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
+  display: "swap",
 });
+
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
-  title: "Mis Finanzas — Gestión personal simple",
-  description:
-    "Administrá ingresos, gastos y presupuesto desde cualquier dispositivo. Funciona sin internet.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    template: `%s — ${BRAND_NAME}`,
+  },
+  description: BRAND_DESCRIPTION,
+  applicationName: BRAND_NAME,
   manifest: "/manifest.json",
+  keywords: [
+    "finanzas personales",
+    "presupuesto",
+    "control de gastos",
+    "ahorro",
+    "ingresos",
+    "PWA",
+    "offline",
+  ],
+  authors: [{ name: BRAND_NAME }],
+  creator: BRAND_NAME,
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    url: siteUrl,
+    siteName: BRAND_NAME,
+    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    description: BRAND_SHORT_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    description: BRAND_SHORT_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Mis Finanzas",
+    title: BRAND_NAME,
+  },
+  alternates: {
+    canonical: siteUrl,
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#059669",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1d4ed8" },
+    { media: "(prefers-color-scheme: dark)", color: "#3b82f6" },
+  ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -40,7 +89,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans" suppressHydrationWarning>
         {children}

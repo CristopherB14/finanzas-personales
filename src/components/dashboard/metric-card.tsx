@@ -12,9 +12,9 @@ interface MetricCardProps {
 }
 
 const trafficColors: Record<TrafficLight, string> = {
-  green: "text-emerald-700 dark:text-emerald-400",
-  yellow: "text-amber-700 dark:text-amber-400",
-  red: "text-red-700 dark:text-red-400",
+  green: "text-success",
+  yellow: "text-warning",
+  red: "text-destructive",
 };
 
 export function MetricCard({
@@ -28,7 +28,7 @@ export function MetricCard({
     <Card
       className={cn(
         variant === "hero" &&
-          "border-emerald-300/60 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-800 dark:from-emerald-950/30 dark:to-card"
+          "border-primary/20 bg-gradient-to-br from-primary/5 to-card dark:border-primary/30 dark:from-primary/10"
       )}
     >
       <CardContent className={cn("p-4", variant === "hero" && "p-6")}>

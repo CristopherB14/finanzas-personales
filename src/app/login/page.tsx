@@ -7,8 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { BrandLogo } from "@/components/layout/brand-logo";
 import { textLink } from "@/lib/a11y";
+import { BRAND_NAME } from "@/lib/brand";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,13 +46,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="mb-8">
+        <BrandLogo href="/" size="lg" />
+      </div>
+      <Card className="w-full max-w-md shadow-md">
         <CardHeader>
           <CardTitle>Ingresar</CardTitle>
+          <CardDescription>
+            Accedé a tu cuenta de {BRAND_NAME}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -60,6 +68,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                aria-invalid={error ? true : undefined}
               />
             </div>
             <div className="space-y-2">
@@ -71,9 +80,14 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                aria-invalid={error ? true : undefined}
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Ingresando…" : "Ingresar"}
             </Button>

@@ -68,9 +68,9 @@ export function GoogleCalendarConnect() {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-border bg-card p-5">
+    <div className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Calendar className="h-5 w-5" />
         </span>
         <div className="space-y-1">
@@ -85,7 +85,7 @@ export function GoogleCalendarConnect() {
 
       {connected ? (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+          <div className="flex items-center gap-2 text-sm text-success">
             <Check className="h-4 w-4" />
             Conectado
             {calendarId && calendarId !== "primary" && (
@@ -108,7 +108,7 @@ export function GoogleCalendarConnect() {
       )}
 
       {message && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">{message}</p>
+        <p className="text-sm text-success" role="status">{message}</p>
       )}
       {error && <p className={errorText}>{error}</p>}
     </div>

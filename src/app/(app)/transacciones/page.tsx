@@ -192,7 +192,7 @@ function TransactionsPageContent() {
                           {t.description ||
                             (t.type === "income" ? "Ingreso" : "Gasto")}
                         </p>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                           {t.type === "income" ? "Ingreso" : "Gasto"}
                         </span>
                         {t.recurring_expense_id && (
@@ -214,10 +214,10 @@ function TransactionsPageContent() {
                     </div>
                     <div className="flex items-center gap-2">
                       <p
-                        className={`font-semibold tabular-nums ${
+                        className={`amount text-base ${
                           t.type === "income"
-                            ? "text-emerald-700 dark:text-emerald-400"
-                            : "text-red-700 dark:text-red-400"
+                            ? "text-success"
+                            : "text-destructive"
                         }`}
                       >
                         {t.type === "income" ? "+" : "−"}

@@ -79,22 +79,22 @@ export function navLink(active: boolean) {
     focusRing,
     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium",
     active
-      ? "bg-accent/10 text-accent dark:bg-accent/20"
+      ? "bg-primary/10 text-primary dark:bg-primary/20"
       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted/80"
   );
 }
 
-/** Bottom mobile navigation links. */
+/** Bottom mobile navigation links — min 44px touch targets. */
 export function mobileNavLink(active: boolean, highlight = false) {
   return cn(
     interactive,
     focusRing,
-    "flex flex-col items-center gap-0.5 py-1 text-[10px] font-medium rounded-lg",
+    "flex flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[11px] font-medium",
     highlight &&
-      "-mt-5 flex h-14 w-14 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:bg-primary/95",
+      "-mt-4 flex h-14 w-14 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:bg-primary/95",
     !highlight &&
       (active
-        ? "text-accent"
+        ? "text-primary"
         : "text-muted-foreground hover:text-foreground active:text-foreground")
   );
 }
@@ -120,11 +120,11 @@ export const inlineAction = cn(
   "h-8 gap-1 px-2 text-accent hover:bg-accent/10 hover:text-accent/90 active:bg-accent/15"
 );
 
-/** Brand / app title links. */
+/** Brand / app title links (legacy — prefer BrandLogo component). */
 export const brandLink = cn(
   interactive,
   focusRing,
-  "rounded-sm font-bold text-accent hover:text-accent/90"
+  "rounded-sm font-bold text-primary hover:text-primary/90"
 );
 
 /** Dashed empty-state panels. */
@@ -135,3 +135,6 @@ export const emptyPanel = cn(
 
 /** Semantic error copy. */
 export const errorText = "text-sm text-destructive";
+
+/** Semantic success copy. */
+export const successText = "text-sm text-success";
