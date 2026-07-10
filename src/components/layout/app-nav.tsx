@@ -71,40 +71,50 @@ export function AppNav() {
 
   return (
     <>
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:block">
-        <div className="flex h-full flex-col p-4">
-          <BrandLogo href="/dashboard" className="mb-4 px-1" size="md" />
-          <UserAccountIndicator variant="sidebar" className="mb-5" />
-          <nav className="flex flex-1 flex-col gap-0.5" aria-label="Navegación principal">
-            {sidebarItems.map(({ href, label, icon: Icon }) => {
-              const active = isNavActive(pathname, href);
+      <aside className="hidden h-dvh w-60 shrink-0 overflow-hidden border-r border-border bg-card md:block">
+        <div className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain scroll-smooth">
+          <div className="flex shrink-0 justify-center px-4 pb-5 pt-6">
+            <BrandLogo href="/dashboard" size="md" />
+          </div>
 
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={navLink(active)}
-                >
-                  <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="mt-4 space-y-1 border-t border-border pt-4">
-            <Link href={ROUTES.newTransaction} className={primaryActionLink}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Nueva transacción
-            </Link>
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className={ghostActionButton}
+          <div className="flex min-h-0 flex-1 flex-col px-4 pb-6">
+            <UserAccountIndicator variant="sidebar" className="mb-6" />
+
+            <nav
+              className="flex flex-col gap-1"
+              aria-label="Navegación principal"
             >
-              <LogOut className="h-4 w-4" aria-hidden />
-              Cerrar sesión
-            </button>
+              {sidebarItems.map(({ href, label, icon: Icon }) => {
+                const active = isNavActive(pathname, href);
+
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={navLink(active)}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto space-y-1.5 border-t border-border pt-5">
+              <Link href={ROUTES.newTransaction} className={primaryActionLink}>
+                <Plus className="h-4 w-4" aria-hidden />
+                Nueva transacción
+              </Link>
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                className={ghostActionButton}
+              >
+                <LogOut className="h-4 w-4" aria-hidden />
+                Cerrar sesión
+              </button>
+            </div>
           </div>
         </div>
       </aside>
