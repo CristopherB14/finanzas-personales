@@ -132,10 +132,15 @@ sequenceDiagram
 
 - **Web/PWA**: Vercel o similar + dominio custom.
 - **Supabase**: proyecto dedicado por entorno (dev/staging/prod).
-- **Variables** (mismas claves en `.env` y `.env.local`; solo `GOOGLE_REDIRECT_URI` difiere por entorno):
+- **Variables** (mismas claves en `.env` y `.env.local`; solo `GOOGLE_REDIRECT_URI` / `NEXT_PUBLIC_APP_URL` difieren por entorno):
   - `NEXT_PUBLIC_SUPABASE_URL` — URL del proyecto Supabase
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — clave anon/publica de Supabase
-  - `SUPABASE_SERVICE_ROLE_KEY` — clave service role (solo servidor; tokens OAuth de Google Calendar)
+  - `SUPABASE_SERVICE_ROLE_KEY` — clave service role (solo servidor; tokens OAuth de Google Calendar y settlement de pagos)
   - `GOOGLE_CLIENT_ID` — OAuth client ID de Google Cloud
   - `GOOGLE_CLIENT_SECRET` — OAuth client secret (solo servidor)
   - `GOOGLE_REDIRECT_URI` — callback OAuth (`http://localhost:3000/...` en local; dominio de producción en `.env`)
+  - `MERCADOPAGO_ACCESS_TOKEN` — Access Token de Mercado Pago (solo servidor; test o producción)
+  - `MERCADOPAGO_WEBHOOK_SECRET` — Secret de firma de webhooks (solo servidor)
+  - `MERCADOPAGO_ENV` — `sandbox` o `production` (default: sandbox)
+  - `NEXT_PUBLIC_APP_URL` — URL pública de la app (back_urls + notification_url); en local puede omitirse y se usa el origin del request
+  - `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` — opcional (Checkout Pro por redirect no la requiere en el cliente)

@@ -8,4 +8,5 @@ export const ROUTES = {
     `/transacciones/${clientId}/editar`,
   editRecurring: (id: string) => `/transacciones/recurrentes/${id}/editar`,
   integrations: "/integraciones",
+  paymentResult: "/pagos/resultado",
 } as const;

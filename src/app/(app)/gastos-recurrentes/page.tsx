@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { CalendarClock, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PayWithMercadoPagoButton } from "@/components/payments/pay-with-mercado-pago-button";
 import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -14,6 +15,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useRecurringExpenses } from "@/hooks/use-recurring-expenses";
 import { formatCategoryLabel } from "@/lib/categories/helpers";
 import { getFrequencyLabel } from "@/lib/recurrence/engine";
+import { buildExpenseFromRecurring } from "@/lib/recurrence/generator";
 import { formatMoney } from "@/lib/format";
 import type { RecurringExpense } from "@/types/database";
 
@@ -52,6 +54,7 @@ function RecurringExpenseCard({
   overdue,
   onConfirm,
   confirming,
+  alreadyRecorded,
 }: {
   expense: RecurringExpense;
   categoryLabel: string;
@@ -59,7 +62,15 @@ function RecurringExpenseCard({
   overdue: boolean;
   onConfirm?: () => void;
   confirming?: boolean;
+  alreadyRecorded?: boolean;
 }) {
+  const [payError, setPayError] = useState<string | null>(null);
+  const canPay =
+    expense.is_active &&
+    overdue &&
+    !alreadyRecorded &&
+    expense.currency_code === "ARS";
+
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-3 p-4">
@@ -67,6 +78,11 @@ function RecurringExpenseCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium">{expense.name}</p>
             <StatusBadge overdue={overdue} active={expense.is_active} />
+            {alreadyRecorded && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                Pagado
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             {formatMoney((expense.original_amount_cents ?? expense.amount_cents), expense.currency_code)}
@@ -94,11 +110,17 @@ function RecurringExpenseCard({
               </span>
             )}
           </div>
+          {payError && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+              {payError}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           {!expense.auto_create &&
             expense.is_active &&
             overdue &&
+            !alreadyRecorded &&
             onConfirm && (
               <Button
                 size="sm"
@@ -109,6 +131,35 @@ function RecurringExpenseCard({
                 {confirming ? "Confirmando…" : "Confirmar gasto"}
               </Button>
             )}
+          {canPay && (
+            <PayWithMercadoPagoButton
+              size="sm"
+              variant="secondary"
+              label="Pagar con Mercado Pago"
+              onError={setPayError}
+              buildPayload={() => {
+                const tx = buildExpenseFromRecurring(
+                  expense,
+                  expense.next_due_date
+                );
+                return {
+                  account_id: tx.account_id,
+                  category_id: tx.category_id,
+                  amount_cents: tx.amount_cents,
+                  currency_code: "ARS",
+                  description: expense.name,
+                  transaction_date: tx.transaction_date,
+                  recurring_expense_id: expense.id,
+                  occurrence_date: expense.next_due_date,
+                  transaction_client_id: tx.client_id,
+                  original_amount_cents: tx.original_amount_cents,
+                  exchange_rate: tx.exchange_rate,
+                  converted_amount_cents: tx.converted_amount_cents,
+                  exchange_rate_source: tx.exchange_rate_source,
+                };
+              }}
+            />
+          )}
           <Button asChild variant="ghost" size="sm" className="h-8 px-2">
             <Link href={`/gastos-recurrentes/${expense.id}/editar`}>
               <Pencil className="h-3.5 w-3.5" />
@@ -199,22 +250,29 @@ export default function GastosRecurrentesPage() {
             Vencidos ({overdue.length})
           </h2>
           <ul className="space-y-2">
-            {overdue.map((expense) => (
-              <li key={expense.id}>
-                <RecurringExpenseCard
-                  expense={expense}
-                  categoryLabel={categoryLabel(expense.category_id)}
-                  accountName={accountMap.get(expense.account_id) ?? ""}
-                  overdue
-                  onConfirm={
-                    !expense.auto_create
-                      ? () => void handleConfirm(expense.id)
-                      : undefined
-                  }
-                  confirming={confirmingId === expense.id}
-                />
-              </li>
-            ))}
+            {overdue.map((expense) => {
+              const occurrenceClientId = buildExpenseFromRecurring(
+                expense,
+                expense.next_due_date
+              ).client_id;
+              return (
+                <li key={expense.id}>
+                  <RecurringExpenseCard
+                    expense={expense}
+                    categoryLabel={categoryLabel(expense.category_id)}
+                    accountName={accountMap.get(expense.account_id) ?? ""}
+                    overdue
+                    alreadyRecorded={clientIds.has(occurrenceClientId)}
+                    onConfirm={
+                      !expense.auto_create
+                        ? () => void handleConfirm(expense.id)
+                        : undefined
+                    }
+                    confirming={confirmingId === expense.id}
+                  />
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

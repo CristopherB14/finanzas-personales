@@ -30,6 +30,7 @@ import {
 } from "@/lib/a11y";
 import { cn } from "@/lib/utils";
 import { SyncToGoogleCalendarField } from "@/components/google-calendar/sync-to-google-calendar-field";
+import { PayWithMercadoPagoButton } from "@/components/payments/pay-with-mercado-pago-button";
 import {
   getTransactionTitle,
   syncToGoogleCalendar,
@@ -42,6 +43,7 @@ import type {
   LocalTransaction,
 } from "@/types/database";
 import type { TransactionInput } from "@/hooks/use-transactions";
+import type { StartCheckoutInput } from "@/lib/payments/client";
 
 interface TransactionFormProps {
   mode: "create" | "edit";
@@ -497,6 +499,57 @@ export function TransactionForm({
               ? "Guardar"
               : "Guardar cambios"}
         </Button>
+
+        {mode === "create" && type === "expense" && (
+          <PayWithMercadoPagoButton
+            className="w-full"
+            size="lg"
+            variant="outline"
+            disabled={saving}
+            onError={setError}
+            validate={() => {
+              const cents = parseMoneyInput(amount);
+              if (!cents || cents <= 0) return "Ingresá un monto válido.";
+              if (!accountId) return "Seleccioná una cuenta.";
+              if (!subcategoryId) return "Seleccioná una subcategoría.";
+              if (normalizeCurrencyCode(currency) !== "ARS") {
+                return "Mercado Pago solo admite ARS en este MVP. Cambiá la moneda a ARS.";
+              }
+              return null;
+            }}
+            buildPayload={(): StartCheckoutInput | null => {
+              const cents = parseMoneyInput(amount);
+              if (!cents || !accountId || !subcategoryId) return null;
+              let resolved;
+              try {
+                resolved = resolveMovementAmounts({
+                  originalAmountCents: cents,
+                  movementCurrency: currency,
+                  accountCurrency,
+                  exchangeRate: parseExchangeRateInput(exchangeRate),
+                  exchangeRateSource,
+                });
+              } catch {
+                return null;
+              }
+              return {
+                account_id: accountId,
+                category_id: subcategoryId,
+                amount_cents: resolved.amount_cents,
+                currency_code: "ARS",
+                description:
+                  description ||
+                  getTransactionTitle(allCategories, subcategoryId, description) ||
+                  "Gasto",
+                transaction_date: date,
+                original_amount_cents: resolved.original_amount_cents,
+                exchange_rate: resolved.exchange_rate,
+                converted_amount_cents: resolved.converted_amount_cents,
+                exchange_rate_source: resolved.exchange_rate_source,
+              };
+            }}
+          />
+        )}
 
         {mode === "edit" && onDelete && (
           <div className="space-y-2 border-t border-border pt-4">

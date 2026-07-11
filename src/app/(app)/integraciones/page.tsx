@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { GoogleCalendarConnect } from "@/components/google-calendar/google-calendar-connect";
+import { MercadoPagoPaymentsCard } from "@/components/payments/mercadopago-payments-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -13,6 +14,7 @@ function IntegracionesContent() {
         description="Conectá servicios externos para enriquecer tu experiencia."
       />
       <GoogleCalendarConnect />
+      <MercadoPagoPaymentsCard />
     </div>
   );
 }

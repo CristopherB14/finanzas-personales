@@ -54,7 +54,9 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/registro");
-  const isPublicApi = pathname.startsWith("/api/exchange-rate/");
+  const isPublicApi =
+    pathname.startsWith("/api/exchange-rate/") ||
+    pathname.startsWith("/api/payments/mercadopago/webhook");
   const isPublic = pathname === "/" || isAuthRoute || isPublicApi;
 
   if (!user && !isPublic) {
