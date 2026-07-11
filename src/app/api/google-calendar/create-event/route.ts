@@ -4,6 +4,8 @@ import { createGoogleCalendarEvent } from "@/lib/google-calendar/events";
 import { getValidAccessToken } from "@/lib/google-calendar/tokens";
 import { createEventBodySchema } from "@/lib/google-calendar/validation";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {

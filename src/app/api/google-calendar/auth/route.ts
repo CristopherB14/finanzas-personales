@@ -3,9 +3,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildGoogleAuthUrl,
+  getGoogleOAuthEnvDiagnostics,
   GOOGLE_OAUTH_STATE_COOKIE,
   resolveGoogleRedirectUri,
 } from "@/lib/google-calendar/config";
+
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
@@ -23,10 +26,14 @@ export async function GET(request: Request) {
     const origin = new URL(request.url).origin;
     const state = randomUUID();
     const redirectUri = resolveGoogleRedirectUri(origin);
+
     console.info("[Google OAuth] Starting authorization", {
+      origin,
       redirect_uri: redirectUri,
       user_id: user.id,
+      env: getGoogleOAuthEnvDiagnostics(),
     });
+
     const authUrl = buildGoogleAuthUrl(origin, state);
 
     const response = NextResponse.redirect(authUrl);
@@ -42,6 +49,10 @@ export async function GET(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "OAuth configuration error";
+    console.error("[Google OAuth] Auth route failed", {
+      message,
+      env: getGoogleOAuthEnvDiagnostics(),
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

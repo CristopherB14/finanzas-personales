@@ -9,24 +9,62 @@ export const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 export const GOOGLE_CALENDAR_API =
   "https://www.googleapis.com/calendar/v3";
 
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
+/** Safe presence summary for server logs — never includes secret values. */
+export function getGoogleOAuthEnvDiagnostics() {
+  const clientId = readEnv("GOOGLE_CLIENT_ID");
+  const clientSecret = readEnv("GOOGLE_CLIENT_SECRET");
+  const redirectUri = readEnv("GOOGLE_REDIRECT_URI");
+
+  return {
+    has_client_id: Boolean(clientId),
+    client_id_length: clientId?.length ?? 0,
+    client_id_suffix: clientId ? clientId.slice(-8) : null,
+    has_client_secret: Boolean(clientSecret),
+    client_secret_length: clientSecret?.length ?? 0,
+    has_redirect_uri: Boolean(redirectUri),
+    redirect_uri: redirectUri ?? null,
+    node_env: process.env.NODE_ENV ?? null,
+    vercel_env: process.env.VERCEL_ENV ?? null,
+  };
+}
+
 export function resolveGoogleRedirectUri(origin: string): string {
-  const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
+  const configured = readEnv("GOOGLE_REDIRECT_URI");
   if (configured) return configured.replace(/\/$/, "");
-  return `${origin}/api/google-calendar/callback`;
+  return `${origin.replace(/\/$/, "")}/api/google-calendar/callback`;
 }
 
 export function getGoogleOAuthConfig(origin: string) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = readEnv("GOOGLE_CLIENT_ID");
+  const clientSecret = readEnv("GOOGLE_CLIENT_SECRET");
   const redirectUri = resolveGoogleRedirectUri(origin);
 
-  if (!clientId || !clientSecret) {
+  const missing: string[] = [];
+  if (!clientId) missing.push("GOOGLE_CLIENT_ID");
+  if (!clientSecret) missing.push("GOOGLE_CLIENT_SECRET");
+
+  if (missing.length > 0) {
+    console.error("[Google OAuth] Missing required environment variables", {
+      missing,
+      ...getGoogleOAuthEnvDiagnostics(),
+    });
     throw new Error(
-      "Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables"
+      `Missing ${missing.join(" and ")} environment variable${
+        missing.length > 1 ? "s" : ""
+      }`
     );
   }
 
-  return { clientId, clientSecret, redirectUri };
+  return {
+    clientId: clientId!,
+    clientSecret: clientSecret!,
+    redirectUri,
+  };
 }
 
 export function buildGoogleAuthUrl(
