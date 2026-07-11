@@ -17,6 +17,10 @@ export type RecurringExpenseInput = {
   category_id: string;
   account_id: string;
   currency_code?: string;
+  original_amount_cents?: number;
+  exchange_rate?: number | null;
+  converted_amount_cents?: number | null;
+  exchange_rate_source?: "bna" | "manual" | null;
   start_date: string;
   end_date?: string | null;
   frequency: RecurrenceFrequency;
@@ -94,6 +98,11 @@ export async function createRecurringExpense(
       category_id: input.category_id,
       account_id: input.account_id,
       currency_code: input.currency_code ?? "ARS",
+      original_amount_cents:
+        input.original_amount_cents ?? input.amount_cents,
+      exchange_rate: input.exchange_rate ?? null,
+      converted_amount_cents: input.converted_amount_cents ?? null,
+      exchange_rate_source: input.exchange_rate_source ?? null,
       start_date: input.start_date,
       end_date: input.end_date ?? null,
       frequency: input.frequency,
@@ -149,6 +158,16 @@ export async function updateRecurringExpense(
   if (input.category_id !== undefined) patch.category_id = input.category_id;
   if (input.account_id !== undefined) patch.account_id = input.account_id;
   if (input.currency_code !== undefined) patch.currency_code = input.currency_code;
+  if (input.original_amount_cents !== undefined) {
+    patch.original_amount_cents = input.original_amount_cents;
+  }
+  if (input.exchange_rate !== undefined) patch.exchange_rate = input.exchange_rate;
+  if (input.converted_amount_cents !== undefined) {
+    patch.converted_amount_cents = input.converted_amount_cents;
+  }
+  if (input.exchange_rate_source !== undefined) {
+    patch.exchange_rate_source = input.exchange_rate_source;
+  }
   if (input.start_date !== undefined) patch.start_date = input.start_date;
   if (input.end_date !== undefined) patch.end_date = input.end_date;
   if (input.frequency !== undefined) patch.frequency = input.frequency;

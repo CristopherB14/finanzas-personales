@@ -67,7 +67,7 @@ export default function GastosPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-red-700 dark:text-red-400 tabular-nums">
-                    −{formatMoney(t.amount_cents, t.currency_code)}
+                    −{formatMoney((t.original_amount_cents ?? t.amount_cents), t.currency_code)}
                   </p>
                   <Button asChild variant="ghost" size="sm" className="h-8 px-2">
                     <Link href={`/gastos/${t.client_id}/editar`}>

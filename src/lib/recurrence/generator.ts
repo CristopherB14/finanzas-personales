@@ -41,6 +41,11 @@ export function buildExpenseFromRecurring(
     type: "expense",
     amount_cents: expense.amount_cents,
     currency_code: expense.currency_code,
+    original_amount_cents:
+      expense.original_amount_cents ?? expense.amount_cents,
+    exchange_rate: expense.exchange_rate ?? null,
+    converted_amount_cents: expense.converted_amount_cents ?? null,
+    exchange_rate_source: expense.exchange_rate_source ?? null,
     transaction_date: occurrenceDate,
     description: expense.name,
     client_id: recurringOccurrenceClientId(expense.client_id, occurrenceDate),

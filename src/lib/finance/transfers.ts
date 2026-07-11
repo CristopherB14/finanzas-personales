@@ -1,5 +1,10 @@
 import type { Account, Transaction } from "@/types/database";
 import { accountBalanceFromTransactions } from "@/lib/data/accounts";
+import {
+  isCurrencyCode,
+  resolveTransferAmounts,
+  type ExchangeRateSource,
+} from "@/lib/finance/currency";
 
 export function validateTransferInput(
   input: {
@@ -7,13 +12,23 @@ export function validateTransferInput(
     to_account_id: string;
     amount_cents: number;
     currency_code: string;
+    original_amount_cents?: number;
+    exchange_rate?: number | null;
+    exchange_rate_source?: ExchangeRateSource | null;
   },
   accounts: Account[],
   transactions: Transaction[],
   excludeClientId?: string
 ): string | null {
-  if (input.amount_cents <= 0) {
+  const originalAmount =
+    input.original_amount_cents ?? input.amount_cents;
+
+  if (originalAmount <= 0) {
     return "Ingresá un monto válido.";
+  }
+
+  if (!isCurrencyCode(input.currency_code)) {
+    return "Moneda inválida. Usá ARS o USD.";
   }
 
   if (input.account_id === input.to_account_id) {
@@ -31,8 +46,21 @@ export function validateTransferInput(
     return "Seleccioná una cuenta destino.";
   }
 
-  if (sourceAccount.currency_code !== destinationAccount.currency_code) {
-    return "Las cuentas deben usar la misma moneda.";
+  let sourceDebitCents: number;
+  try {
+    const resolved = resolveTransferAmounts({
+      originalAmountCents: originalAmount,
+      movementCurrency: input.currency_code,
+      sourceCurrency: sourceAccount.currency_code,
+      destinationCurrency: destinationAccount.currency_code,
+      exchangeRate: input.exchange_rate,
+      exchangeRateSource: input.exchange_rate_source,
+    });
+    sourceDebitCents = resolved.amount_cents;
+  } catch (error) {
+    return error instanceof Error
+      ? error.message
+      : "No se pudo validar la conversión.";
   }
 
   const relevantTransactions = excludeClientId
@@ -45,7 +73,7 @@ export function validateTransferInput(
     sourceAccount.type
   );
 
-  if (sourceBalance < input.amount_cents) {
+  if (sourceBalance < sourceDebitCents) {
     return "La cuenta origen no tiene saldo suficiente.";
   }
 

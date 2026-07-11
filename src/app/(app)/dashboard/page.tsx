@@ -14,7 +14,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { useUser } from "@/hooks/use-user";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMoneyByCurrency } from "@/lib/format";
 import {
   buildDashboardMetrics,
   last6MonthsChart,
@@ -38,7 +38,12 @@ export default function DashboardPage() {
 
   const metrics = buildDashboardMetrics(transactions, year, month, accounts);
 
-  const chartData = last6MonthsChart(transactions);
+  const chartData = last6MonthsChart(
+    transactions,
+    now,
+    accounts,
+    metrics.primaryCurrency
+  );
   const emergencyPercent = Math.min(100, (metrics.emergencyMonths / 6) * 100);
 
   return (
@@ -59,33 +64,33 @@ export default function DashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <MetricCard
           label="Efectivo disponible"
-          value={formatMoney(metrics.cashCents)}
+          value={formatMoneyByCurrency(metrics.cashByCurrency)}
           variant="hero"
         />
         <MetricCard
           label="Patrimonio neto"
-          value={formatMoney(metrics.netWorthCents)}
-          subtext={`Inversiones: ${formatMoney(metrics.investmentAssetsCents)}`}
+          value={formatMoneyByCurrency(metrics.netWorthByCurrency)}
+          subtext={`Inversiones: ${formatMoneyByCurrency(metrics.investedAssetsByCurrency)}`}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
         <MetricCard
           label="Ingresos del mes"
-          value={formatMoney(metrics.incomeCents)}
+          value={formatMoneyByCurrency(metrics.incomeByCurrency)}
         />
         <MetricCard
           label="Gastos del mes"
-          value={formatMoney(metrics.expenseCents)}
+          value={formatMoneyByCurrency(metrics.expenseByCurrency)}
         />
         <MetricCard
           label="Inversiones del mes"
-          value={formatMoney(metrics.investmentCents)}
+          value={formatMoneyByCurrency(metrics.investmentByCurrency)}
         />
         <MetricCard
           label="Ahorro del mes"
-          value={formatMoney(metrics.savingsCents)}
-          subtext={`Tasa de ahorro: ${metrics.savingsRate.toFixed(0)}%`}
+          value={formatMoneyByCurrency(metrics.savingsByCurrency)}
+          subtext={`Tasa de ahorro (${metrics.primaryCurrency}): ${metrics.savingsRate.toFixed(0)}%`}
           traffic={metrics.status}
         />
       </div>
@@ -164,7 +169,7 @@ export default function DashboardPage() {
           <CardTitle className="text-base">Últimos 6 meses</CardTitle>
         </CardHeader>
         <CardContent>
-          <MonthlyChart data={chartData} />
+          <MonthlyChart data={chartData} currency={metrics.primaryCurrency} />
         </CardContent>
       </Card>
 

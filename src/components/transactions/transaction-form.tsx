@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
@@ -10,9 +10,17 @@ import { Label } from "@/components/ui/label";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { AccountCreateDialog } from "@/components/transactions/account-create-dialog";
 import { CategoryFieldGroup } from "@/components/transactions/category-field-group";
+import { CurrencyFieldGroup } from "@/components/transactions/currency-field-group";
 import { ROUTES } from "@/constants/routes";
 import { resolveTransactionCategorySelection } from "@/lib/categories/helpers";
 import { isCashAccountType } from "@/lib/data/accounts";
+import {
+  normalizeCurrencyCode,
+  parseExchangeRateInput,
+  resolveMovementAmounts,
+  type CurrencyCode,
+  type ExchangeRateSource,
+} from "@/lib/finance/currency";
 import { parseMoneyInput } from "@/lib/format";
 import {
   choiceCard,
@@ -42,7 +50,8 @@ interface TransactionFormProps {
   categories: Category[];
   allCategories: Category[];
   getSubcategoriesFor: (parentId: string) => Category[];
-  currency: string;
+  /** @deprecated Prefer account currency + selector; kept for call-site compat. */
+  currency?: string;
   initial?: LocalTransaction;
   onSubmit: (data: TransactionInput) => Promise<void | LocalTransaction>;
   onCreateAccount?: (data: {
@@ -121,7 +130,7 @@ export function TransactionForm({
   categories,
   allCategories,
   getSubcategoriesFor,
-  currency,
+  currency: currencyProp,
   initial,
   onSubmit,
   onCreateAccount,
@@ -151,8 +160,22 @@ export function TransactionForm({
   );
 
   const [amount, setAmount] = useState(() =>
-    initial ? formatAmountInput(initial.amount_cents) : ""
+    initial
+      ? formatAmountInput(initial.original_amount_cents ?? initial.amount_cents)
+      : ""
   );
+  const [currency, setCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrencyCode(
+      initial?.currency_code ?? currencyProp ?? selectableAccounts[0]?.currency_code
+    )
+  );
+  const [exchangeRate, setExchangeRate] = useState(() =>
+    initial?.exchange_rate != null ? String(initial.exchange_rate) : ""
+  );
+  const [exchangeRateSource, setExchangeRateSource] =
+    useState<ExchangeRateSource | null>(
+      () => initial?.exchange_rate_source ?? null
+    );
   const [parentCategoryId, setParentCategoryId] = useState(
     () =>
       initialSelection.parentId ||
@@ -178,6 +201,22 @@ export function TransactionForm({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+
+  const selectedAccount = useMemo(
+    () => selectableAccounts.find((a) => a.id === accountId) ?? null,
+    [selectableAccounts, accountId]
+  );
+  const accountCurrency = normalizeCurrencyCode(
+    selectedAccount?.currency_code
+  );
+
+  // When account changes on create, default movement currency to account currency.
+  useEffect(() => {
+    if (mode !== "create" || !selectedAccount) return;
+    setCurrency(normalizeCurrencyCode(selectedAccount.currency_code));
+    setExchangeRate("");
+    setExchangeRateSource(null);
+  }, [mode, selectedAccount?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const title =
     mode === "create"
@@ -236,14 +275,36 @@ export function TransactionForm({
       return;
     }
 
+    let resolved;
+    try {
+      resolved = resolveMovementAmounts({
+        originalAmountCents: cents,
+        movementCurrency: currency,
+        accountCurrency,
+        exchangeRate: parseExchangeRateInput(exchangeRate),
+        exchangeRateSource,
+      });
+    } catch (resolveError) {
+      setError(
+        resolveError instanceof Error
+          ? resolveError.message
+          : "No se pudo calcular la conversión."
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       const tx = await onSubmit({
         account_id: accountId,
         category_id: subcategoryId,
         type,
-        amount_cents: cents,
-        currency_code: currency,
+        amount_cents: resolved.amount_cents,
+        currency_code: resolved.currency_code,
+        original_amount_cents: resolved.original_amount_cents,
+        exchange_rate: resolved.exchange_rate,
+        converted_amount_cents: resolved.converted_amount_cents,
+        exchange_rate_source: resolved.exchange_rate_source,
         transaction_date: date,
         description: description || undefined,
       });
@@ -262,8 +323,8 @@ export function TransactionForm({
               description
             ),
             description: description || undefined,
-            amount: cents,
-            currency,
+            amount: resolved.original_amount_cents,
+            currency: resolved.currency_code,
             date,
             type,
             client_id: tx?.client_id,
@@ -313,6 +374,17 @@ export function TransactionForm({
             required
           />
         </div>
+
+        <CurrencyFieldGroup
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          accountCurrency={accountCurrency}
+          exchangeRate={exchangeRate}
+          onExchangeRateChange={setExchangeRate}
+          exchangeRateSource={exchangeRateSource}
+          onExchangeRateSourceChange={setExchangeRateSource}
+          originalAmountCents={parseMoneyInput(amount)}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="date">Fecha</Label>
@@ -379,7 +451,12 @@ export function TransactionForm({
                   >
                     <AccountIcon icon={a.icon} className="h-4 w-4" />
                   </span>
-                  {a.name}
+                  <span className="min-w-0 flex-1">
+                    {a.name}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {a.currency_code}
+                    </span>
+                  </span>
                 </button>
               ))}
             </div>

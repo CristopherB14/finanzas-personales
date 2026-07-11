@@ -221,7 +221,7 @@ function TransactionsPageContent() {
                         }`}
                       >
                         {t.type === "income" ? "+" : "−"}
-                        {formatMoney(t.amount_cents, t.currency_code)}
+                        {formatMoney((t.original_amount_cents ?? t.amount_cents), t.currency_code)}
                       </p>
                       <Button
                         asChild
@@ -269,7 +269,7 @@ function TransactionsPageContent() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {formatMoney(expense.amount_cents, expense.currency_code)}
+                          {formatMoney((expense.original_amount_cents ?? expense.amount_cents), expense.currency_code)}
                           {categoryLabel(expense.category_id) &&
                             ` · ${categoryLabel(expense.category_id)}`}
                           {accountMap.get(expense.account_id) &&

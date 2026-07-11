@@ -119,7 +119,7 @@ export default function InversionesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-cyan-700 tabular-nums">
-                            −{formatMoney(t.amount_cents, t.currency_code)}
+                            −{formatMoney((t.original_amount_cents ?? t.amount_cents), t.currency_code)}
                           </p>
                           <Button asChild variant="ghost" size="sm" className="h-8 px-2">
                             <Link href={`/inversiones/${t.client_id}/editar`}>

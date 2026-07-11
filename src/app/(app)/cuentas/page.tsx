@@ -102,7 +102,12 @@ export default function CuentasPage() {
                       </span>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{account.name}</p>
+                        <p className="truncate font-medium">
+                          {account.name}
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            {account.currency_code}
+                          </span>
+                        </p>
                         {account.description && (
                           <p className="truncate text-xs text-muted-foreground">
                             {account.description}

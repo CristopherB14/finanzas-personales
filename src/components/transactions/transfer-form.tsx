@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
@@ -9,9 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { AccountCreateDialog } from "@/components/transactions/account-create-dialog";
+import { CurrencyFieldGroup } from "@/components/transactions/currency-field-group";
 import {
   accountBalanceFromTransactions,
 } from "@/lib/data/accounts";
+import {
+  normalizeCurrencyCode,
+  parseExchangeRateInput,
+  resolveTransferAmounts,
+  type CurrencyCode,
+  type ExchangeRateSource,
+} from "@/lib/finance/currency";
 import { validateTransferInput } from "@/lib/finance/transfers";
 import { parseMoneyInput, formatMoney } from "@/lib/format";
 import {
@@ -127,7 +135,12 @@ function AccountPicker({
               >
                 <AccountIcon icon={account.icon} className="h-4 w-4" />
               </span>
-              <span className="min-w-0 flex-1">{account.name}</span>
+              <span className="min-w-0 flex-1">
+                {account.name}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  {account.currency_code}
+                </span>
+              </span>
             </button>
           ))}
         </div>
@@ -148,7 +161,9 @@ export function TransferForm({
 }: TransferFormProps) {
   const router = useRouter();
   const [amount, setAmount] = useState(() =>
-    initial ? formatAmountInput(initial.amount_cents) : ""
+    initial
+      ? formatAmountInput(initial.original_amount_cents ?? initial.amount_cents)
+      : ""
   );
   const [fromAccountId, setFromAccountId] = useState(
     () => initial?.account_id ?? accounts[0]?.id ?? ""
@@ -156,6 +171,20 @@ export function TransferForm({
   const [toAccountId, setToAccountId] = useState(
     () => initial?.to_account_id ?? accounts[1]?.id ?? accounts[0]?.id ?? ""
   );
+  const [currency, setCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrencyCode(
+      initial?.currency_code ??
+        accounts.find((a) => a.id === (initial?.account_id ?? accounts[0]?.id))
+          ?.currency_code
+    )
+  );
+  const [exchangeRate, setExchangeRate] = useState(() =>
+    initial?.exchange_rate != null ? String(initial.exchange_rate) : ""
+  );
+  const [exchangeRateSource, setExchangeRateSource] =
+    useState<ExchangeRateSource | null>(
+      () => initial?.exchange_rate_source ?? null
+    );
   const [date, setDate] = useState(
     () => initial?.transaction_date ?? format(new Date(), "yyyy-MM-dd")
   );
@@ -174,6 +203,17 @@ export function TransferForm({
     () => accounts.find((account) => account.id === fromAccountId),
     [accounts, fromAccountId]
   );
+  const toAccount = useMemo(
+    () => accounts.find((account) => account.id === toAccountId),
+    [accounts, toAccountId]
+  );
+
+  useEffect(() => {
+    if (mode !== "create" || !fromAccount) return;
+    setCurrency(normalizeCurrencyCode(fromAccount.currency_code));
+    setExchangeRate("");
+    setExchangeRateSource(null);
+  }, [mode, fromAccount?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const title = mode === "create" ? "Nueva transferencia" : "Editar transferencia";
 
@@ -187,13 +227,16 @@ export function TransferForm({
       return;
     }
 
-    const currencyCode = fromAccount?.currency_code ?? "ARS";
+    const rate = parseExchangeRateInput(exchangeRate);
     const validationError = validateTransferInput(
       {
         account_id: fromAccountId,
         to_account_id: toAccountId,
         amount_cents: cents,
-        currency_code: currencyCode,
+        original_amount_cents: cents,
+        currency_code: currency,
+        exchange_rate: rate,
+        exchange_rate_source: exchangeRateSource,
       },
       accounts,
       transactions,
@@ -205,6 +248,30 @@ export function TransferForm({
       return;
     }
 
+    if (!fromAccount || !toAccount) {
+      setError("Seleccioná cuentas origen y destino.");
+      return;
+    }
+
+    let resolved;
+    try {
+      resolved = resolveTransferAmounts({
+        originalAmountCents: cents,
+        movementCurrency: currency,
+        sourceCurrency: fromAccount.currency_code,
+        destinationCurrency: toAccount.currency_code,
+        exchangeRate: rate,
+        exchangeRateSource,
+      });
+    } catch (resolveError) {
+      setError(
+        resolveError instanceof Error
+          ? resolveError.message
+          : "No se pudo calcular la conversión."
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       await onSubmit({
@@ -212,8 +279,12 @@ export function TransferForm({
         to_account_id: toAccountId,
         category_id: null,
         type: "transfer",
-        amount_cents: cents,
-        currency_code: currencyCode,
+        amount_cents: resolved.amount_cents,
+        currency_code: resolved.currency_code,
+        original_amount_cents: resolved.original_amount_cents,
+        exchange_rate: resolved.exchange_rate,
+        converted_amount_cents: resolved.converted_amount_cents,
+        exchange_rate_source: resolved.exchange_rate_source,
         transaction_date: date,
         description: description || undefined,
       });
@@ -271,6 +342,24 @@ export function TransferForm({
             </p>
           )}
         </div>
+
+        <CurrencyFieldGroup
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          accountCurrency={normalizeCurrencyCode(fromAccount?.currency_code)}
+          destinationCurrency={normalizeCurrencyCode(toAccount?.currency_code)}
+          requiresConversion={
+            Boolean(fromAccount && toAccount) &&
+            normalizeCurrencyCode(fromAccount?.currency_code) !==
+              normalizeCurrencyCode(toAccount?.currency_code)
+          }
+          exchangeRate={exchangeRate}
+          onExchangeRateChange={setExchangeRate}
+          exchangeRateSource={exchangeRateSource}
+          onExchangeRateSourceChange={setExchangeRateSource}
+          originalAmountCents={parseMoneyInput(amount)}
+          convertedPreviewLabel="Crédito en destino"
+        />
 
         <div className="space-y-2">
           <Label htmlFor="date">Fecha</Label>

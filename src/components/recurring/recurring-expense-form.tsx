@@ -10,8 +10,16 @@ import { Label } from "@/components/ui/label";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { AccountCreateDialog } from "@/components/transactions/account-create-dialog";
 import { CategoryFieldGroup } from "@/components/transactions/category-field-group";
+import { CurrencyFieldGroup } from "@/components/transactions/currency-field-group";
 import { ROUTES } from "@/constants/routes";
 import { resolveTransactionCategorySelection } from "@/lib/categories/helpers";
+import {
+  normalizeCurrencyCode,
+  parseExchangeRateInput,
+  resolveMovementAmounts,
+  type CurrencyCode,
+  type ExchangeRateSource,
+} from "@/lib/finance/currency";
 import { parseMoneyInput } from "@/lib/format";
 import {
   CUSTOM_UNIT_OPTIONS,
@@ -47,7 +55,8 @@ interface RecurringExpenseFormProps {
   categories: Category[];
   allCategories: Category[];
   getSubcategoriesFor: (parentId: string) => Category[];
-  currency: string;
+  /** @deprecated Prefer account currency + selector. */
+  currency?: string;
   initial?: RecurringExpense;
   onSubmit: (data: RecurringExpenseInput) => Promise<void | RecurringExpense>;
   onCreateAccount?: (data: {
@@ -161,7 +170,7 @@ export function RecurringExpenseForm({
   categories,
   allCategories,
   getSubcategoriesFor,
-  currency,
+  currency: currencyProp,
   initial,
   onSubmit,
   onCreateAccount,
@@ -184,8 +193,22 @@ export function RecurringExpenseForm({
 
   const [name, setName] = useState(initial?.name ?? "");
   const [amount, setAmount] = useState(() =>
-    initial ? formatAmountInput(initial.amount_cents) : ""
+    initial
+      ? formatAmountInput(initial.original_amount_cents ?? initial.amount_cents)
+      : ""
   );
+  const [currency, setCurrency] = useState<CurrencyCode>(() =>
+    normalizeCurrencyCode(
+      initial?.currency_code ?? currencyProp ?? accounts[0]?.currency_code
+    )
+  );
+  const [exchangeRate, setExchangeRate] = useState(() =>
+    initial?.exchange_rate != null ? String(initial.exchange_rate) : ""
+  );
+  const [exchangeRateSource, setExchangeRateSource] =
+    useState<ExchangeRateSource | null>(
+      () => initial?.exchange_rate_source ?? null
+    );
   const [parentCategoryId, setParentCategoryId] = useState(
     () => initialSelection.parentId || categories[0]?.id || ""
   );
@@ -225,6 +248,14 @@ export function RecurringExpenseForm({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+
+  const selectedAccount = useMemo(
+    () => accounts.find((a) => a.id === accountId) ?? null,
+    [accounts, accountId]
+  );
+  const accountCurrency = normalizeCurrencyCode(
+    selectedAccount?.currency_code
+  );
 
   const title =
     mode === "create" ? "Nuevo gasto recurrente" : "Editar gasto recurrente";
@@ -272,14 +303,36 @@ export function RecurringExpenseForm({
       return;
     }
 
+    let resolved;
+    try {
+      resolved = resolveMovementAmounts({
+        originalAmountCents: cents,
+        movementCurrency: currency,
+        accountCurrency,
+        exchangeRate: parseExchangeRateInput(exchangeRate),
+        exchangeRateSource,
+      });
+    } catch (resolveError) {
+      setError(
+        resolveError instanceof Error
+          ? resolveError.message
+          : "No se pudo calcular la conversión."
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       await onSubmit({
         name: name.trim(),
-        amount_cents: cents,
+        amount_cents: resolved.amount_cents,
         category_id: subcategoryId,
         account_id: accountId,
-        currency_code: currency,
+        currency_code: resolved.currency_code,
+        original_amount_cents: resolved.original_amount_cents,
+        exchange_rate: resolved.exchange_rate,
+        converted_amount_cents: resolved.converted_amount_cents,
+        exchange_rate_source: resolved.exchange_rate_source,
         start_date: startDate,
         end_date: endDate || null,
         frequency,
@@ -306,8 +359,8 @@ export function RecurringExpenseForm({
           await syncToGoogleCalendar({
             title: name.trim(),
             description: notes.trim() || undefined,
-            amount: cents,
-            currency,
+            amount: resolved.original_amount_cents,
+            currency: resolved.currency_code,
             date: startDate,
             type: "recurring",
             recurrence: recurrenceRule,
@@ -368,6 +421,17 @@ export function RecurringExpenseForm({
             required
           />
         </div>
+
+        <CurrencyFieldGroup
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          accountCurrency={accountCurrency}
+          exchangeRate={exchangeRate}
+          onExchangeRateChange={setExchangeRate}
+          exchangeRateSource={exchangeRateSource}
+          onExchangeRateSourceChange={setExchangeRateSource}
+          originalAmountCents={parseMoneyInput(amount)}
+        />
 
         <CategoryFieldGroup
           categoryType="expense"

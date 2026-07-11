@@ -18,6 +18,10 @@ export type CategoryType = "income" | "expense" | "investment";
 
 export type TransactionType = "income" | "expense" | "investment" | "transfer";
 
+export type CurrencyCode = "ARS" | "USD";
+
+export type ExchangeRateSource = "bna" | "manual";
+
 export interface Profile {
   id: string;
   display_name: string | null;
@@ -74,8 +78,21 @@ export interface Transaction {
   investment_asset_id?: string | null;
   recurring_expense_id?: string | null;
   type: TransactionType;
+  /** Amount applied to the primary/source account (account currency). */
   amount_cents: number;
+  /** Original movement currency. Missing/legacy rows are treated as ARS. */
   currency_code: string;
+  /** Amount in the movement currency. Defaults to amount_cents for legacy rows. */
+  original_amount_cents?: number;
+  /** ARS per 1 USD when a conversion was applied. */
+  exchange_rate?: number | null;
+  /**
+   * Converted amount when currencies differ.
+   * For transfers: destination credit in destination currency.
+   * For income/expense/investment: same as amount_cents (account currency).
+   */
+  converted_amount_cents?: number | null;
+  exchange_rate_source?: ExchangeRateSource | null;
   transaction_date: string;
   description: string | null;
   tags: string[];
@@ -94,6 +111,10 @@ export interface RecurringExpense {
   category_id: string;
   account_id: string;
   currency_code: string;
+  original_amount_cents?: number;
+  exchange_rate?: number | null;
+  converted_amount_cents?: number | null;
+  exchange_rate_source?: ExchangeRateSource | null;
   start_date: string;
   end_date: string | null;
   frequency: RecurrenceFrequency;

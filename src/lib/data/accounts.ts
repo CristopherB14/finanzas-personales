@@ -211,7 +211,10 @@ function transferDeltaForAccount(
 ): number {
   if (transaction.type !== "transfer" || !transaction.to_account_id) return 0;
   if (transaction.account_id === accountId) return -transaction.amount_cents;
-  if (transaction.to_account_id === accountId) return transaction.amount_cents;
+  if (transaction.to_account_id === accountId) {
+    // Cross-currency transfers credit the destination with converted_amount_cents.
+    return transaction.converted_amount_cents ?? transaction.amount_cents;
+  }
   return 0;
 }
 
@@ -242,28 +245,54 @@ export function transactionCountByAccount(
 
 export function totalCashBalanceFromTransactions(
   transactions: Transaction[],
-  accounts: Account[]
+  accounts: Account[],
+  currencyCode?: string
 ): number {
-  const accountTypeById = new Map(accounts.map((a) => [a.id, a.type]));
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const currency = currencyCode ?? null;
 
   return transactions.reduce((sum, t) => {
     if (t.type === "transfer" && t.to_account_id) {
-      const sourceType = accountTypeById.get(t.account_id);
-      const destinationType = accountTypeById.get(t.to_account_id);
+      const source = accountById.get(t.account_id);
+      const destination = accountById.get(t.to_account_id);
       let delta = 0;
-      if (sourceType && isCashAccountType(sourceType)) {
-        delta -= t.amount_cents;
+      if (source && isCashAccountType(source.type)) {
+        if (!currency || source.currency_code === currency) {
+          delta -= t.amount_cents;
+        }
       }
-      if (destinationType && isCashAccountType(destinationType)) {
-        delta += t.amount_cents;
+      if (destination && isCashAccountType(destination.type)) {
+        if (!currency || destination.currency_code === currency) {
+          delta += t.converted_amount_cents ?? t.amount_cents;
+        }
       }
       return sum + delta;
     }
 
-    const accountType = accountTypeById.get(t.account_id) ?? "checking";
-    if (!isCashAccountType(accountType)) return sum;
-    return sum + transactionDeltaForAccount(t, accountType);
+    const account = accountById.get(t.account_id);
+    if (!account || !isCashAccountType(account.type)) return sum;
+    if (currency && account.currency_code !== currency) return sum;
+    return sum + transactionDeltaForAccount(t, account.type);
   }, 0);
+}
+
+/** Per-currency cash totals — never mixes ARS and USD cents. */
+export function cashBalancesByCurrency(
+  transactions: Transaction[],
+  accounts: Account[]
+): Record<string, number> {
+  const currencies = Array.from(
+    new Set(accounts.map((a) => a.currency_code || "ARS"))
+  );
+  const result: Record<string, number> = {};
+  for (const code of currencies) {
+    result[code] = totalCashBalanceFromTransactions(
+      transactions,
+      accounts,
+      code
+    );
+  }
+  return result;
 }
 
 export function totalBalanceFromTransactions(

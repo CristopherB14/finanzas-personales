@@ -12,7 +12,13 @@ import {
 } from "recharts";
 import type { ChartPoint } from "@/lib/finance/calculations";
 
-export function MonthlyChart({ data }: { data: ChartPoint[] }) {
+export function MonthlyChart({
+  data,
+  currency = "ARS",
+}: {
+  data: ChartPoint[];
+  currency?: string;
+}) {
   return (
     <div className="h-64 w-full min-w-0">
       <ResponsiveContainer width="100%" height={256} minWidth={0}>
@@ -24,7 +30,7 @@ export function MonthlyChart({ data }: { data: ChartPoint[] }) {
             formatter={(value) =>
               new Intl.NumberFormat("es-AR", {
                 style: "currency",
-                currency: "ARS",
+                currency,
               }).format(Number(value ?? 0))
             }
           />

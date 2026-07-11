@@ -79,7 +79,7 @@ export default function TransferenciasPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sky-700 tabular-nums dark:text-sky-400">
-                      {formatMoney(t.amount_cents, t.currency_code)}
+                      {formatMoney((t.original_amount_cents ?? t.amount_cents), t.currency_code)}
                     </p>
                     <Button asChild variant="ghost" size="sm" className="h-8 px-2">
                       <Link href={`/transferencias/${t.client_id}/editar`}>

@@ -67,7 +67,7 @@ export default function IngresosPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                    +{formatMoney(t.amount_cents, t.currency_code)}
+                    +{formatMoney((t.original_amount_cents ?? t.amount_cents), t.currency_code)}
                   </p>
                   <Button asChild variant="ghost" size="sm" className="h-8 px-2">
                     <Link href={`/ingresos/${t.client_id}/editar`}>

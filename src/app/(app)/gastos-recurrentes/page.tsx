@@ -69,7 +69,7 @@ function RecurringExpenseCard({
             <StatusBadge overdue={overdue} active={expense.is_active} />
           </div>
           <p className="text-xs text-muted-foreground">
-            {formatMoney(expense.amount_cents, expense.currency_code)}
+            {formatMoney((expense.original_amount_cents ?? expense.amount_cents), expense.currency_code)}
             {categoryLabel && ` · ${categoryLabel}`}
             {accountName && ` · ${accountName}`}
           </p>

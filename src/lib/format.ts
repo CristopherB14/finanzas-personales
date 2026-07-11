@@ -13,6 +13,24 @@ export function formatMoney(
   }).format(cents / 100);
 }
 
+/** Format one or more currency totals without mixing ARS/USD. */
+export function formatMoneyByCurrency(
+  amounts: Record<string, number>,
+  locale = defaultLocale
+): string {
+  const parts = Object.entries(amounts)
+    .filter(([, cents]) => cents !== 0)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, cents]) => formatMoney(cents, currency, locale));
+
+  if (parts.length === 0) {
+    const fallbackCurrency = Object.keys(amounts)[0] ?? "ARS";
+    return formatMoney(0, fallbackCurrency, locale);
+  }
+
+  return parts.join(" · ");
+}
+
 export function parseMoneyInput(value: string): number {
   const normalized = value.replace(/[^\d.,-]/g, "").replace(",", ".");
   const num = parseFloat(normalized);

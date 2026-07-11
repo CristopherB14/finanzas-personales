@@ -25,6 +25,10 @@ export type TransactionInput = {
   type: TransactionType;
   amount_cents: number;
   currency_code: string;
+  original_amount_cents?: number;
+  exchange_rate?: number | null;
+  converted_amount_cents?: number | null;
+  exchange_rate_source?: "bna" | "manual" | null;
   transaction_date: string;
   description?: string;
   client_id?: string;
@@ -76,6 +80,10 @@ async function upsertRemoteTransaction(
       type: tx.type,
       amount_cents: tx.amount_cents,
       currency_code: tx.currency_code,
+      original_amount_cents: tx.original_amount_cents ?? tx.amount_cents,
+      exchange_rate: tx.exchange_rate ?? null,
+      converted_amount_cents: tx.converted_amount_cents ?? null,
+      exchange_rate_source: tx.exchange_rate_source ?? null,
       transaction_date: tx.transaction_date,
       description: tx.description,
       tags: tx.tags,
@@ -200,6 +208,10 @@ export function useTransactions(userId: string | undefined) {
       type: input.type,
       amount_cents: input.amount_cents,
       currency_code: input.currency_code,
+      original_amount_cents: input.original_amount_cents ?? input.amount_cents,
+      exchange_rate: input.exchange_rate ?? null,
+      converted_amount_cents: input.converted_amount_cents ?? null,
+      exchange_rate_source: input.exchange_rate_source ?? null,
       transaction_date: input.transaction_date,
       description: input.description ?? null,
       tags: input.tags ?? [],
@@ -254,6 +266,10 @@ export function useTransactions(userId: string | undefined) {
       type: input.type,
       amount_cents: input.amount_cents,
       currency_code: input.currency_code,
+      original_amount_cents: input.original_amount_cents ?? input.amount_cents,
+      exchange_rate: input.exchange_rate ?? null,
+      converted_amount_cents: input.converted_amount_cents ?? null,
+      exchange_rate_source: input.exchange_rate_source ?? null,
       transaction_date: input.transaction_date,
       description: input.description ?? null,
       updated_at: new Date().toISOString(),

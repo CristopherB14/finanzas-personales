@@ -33,6 +33,10 @@ export default function FlujoDeCajaPage() {
     () => new Map(accounts.map((a) => [a.id, a.name])),
     [accounts]
   );
+  const accountCurrencyMap = useMemo(
+    () => new Map(accounts.map((a) => [a.id, a.currency_code || "ARS"])),
+    [accounts]
+  );
   const categoryLabel = (categoryId: string | null | undefined) =>
     formatCategoryLabel(categories, categoryId);
 
@@ -207,7 +211,16 @@ export default function FlujoDeCajaPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ transaction, deltaCents, runningBalanceCents, isFuture }) => (
+            {rows.map(({ transaction, deltaCents, runningBalanceCents, isFuture }) => {
+              const accountCurrency =
+                accountCurrencyMap.get(transaction.account_id) ??
+                transaction.currency_code ??
+                "ARS";
+              const displayAmountCents =
+                transaction.original_amount_cents ?? transaction.amount_cents;
+              const displayCurrency = transaction.currency_code || "ARS";
+
+              return (
               <tr
                 key={transaction.client_id}
                 className={cn(
@@ -261,11 +274,11 @@ export default function FlujoDeCajaPage() {
                   )}
                 >
                   {transaction.type === "transfer" ? (
-                    formatMoney(transaction.amount_cents, transaction.currency_code)
+                    formatMoney(displayAmountCents, displayCurrency)
                   ) : (
                     <>
                       {deltaCents >= 0 ? "+" : "−"}
-                      {formatMoney(Math.abs(deltaCents), transaction.currency_code)}
+                      {formatMoney(displayAmountCents, displayCurrency)}
                     </>
                   )}
                 </td>
@@ -277,10 +290,11 @@ export default function FlujoDeCajaPage() {
                       : "text-destructive"
                   )}
                 >
-                  {formatMoney(runningBalanceCents, transaction.currency_code)}
+                  {formatMoney(runningBalanceCents, accountCurrency)}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

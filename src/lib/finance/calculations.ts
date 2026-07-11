@@ -4,8 +4,8 @@ import type {
 } from "@/types/budget";
 import type { Account, Category, Transaction } from "@/types/database";
 import { getSubcategories, isSubcategory } from "@/lib/categories/helpers";
-import { totalCashBalanceFromTransactions } from "@/lib/data/accounts";
-import { totalInvestedCents } from "@/lib/finance/investments";
+import { cashBalancesByCurrency } from "@/lib/data/accounts";
+import { investedByCurrency } from "@/lib/finance/investments";
 import {
   endOfMonth,
   format,
@@ -23,6 +23,8 @@ export interface MonthlySummary {
   savingsRate: number;
 }
 
+export type MonthlySummaryByCurrency = Record<string, MonthlySummary>;
+
 export interface DashboardMetrics extends MonthlySummary {
   cashCents: number;
   investmentAssetsCents: number;
@@ -30,6 +32,24 @@ export interface DashboardMetrics extends MonthlySummary {
   emergencyMonths: number;
   status: TrafficLight;
   statusMessage: string;
+  cashByCurrency: Record<string, number>;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+  investmentByCurrency: Record<string, number>;
+  investedAssetsByCurrency: Record<string, number>;
+  savingsByCurrency: Record<string, number>;
+  netWorthByCurrency: Record<string, number>;
+  primaryCurrency: string;
+}
+
+function emptyMonthlySummary(): MonthlySummary {
+  return {
+    incomeCents: 0,
+    expenseCents: 0,
+    investmentCents: 0,
+    savingsCents: 0,
+    savingsRate: 0,
+  };
 }
 
 export function filterByMonth(
@@ -44,7 +64,9 @@ export function filterByMonth(
   );
 }
 
-export function summarizeMonth(transactions: Transaction[]): MonthlySummary {
+export function summarizeMonthForCurrency(
+  transactions: Transaction[]
+): MonthlySummary {
   let incomeCents = 0;
   let expenseCents = 0;
   let investmentCents = 0;
@@ -59,7 +81,81 @@ export function summarizeMonth(transactions: Transaction[]): MonthlySummary {
   const savingsRate =
     incomeCents > 0 ? (savingsCents / incomeCents) * 100 : 0;
 
-  return { incomeCents, expenseCents, investmentCents, savingsCents, savingsRate };
+  return {
+    incomeCents,
+    expenseCents,
+    investmentCents,
+    savingsCents,
+    savingsRate,
+  };
+}
+
+/** Summaries keyed by account currency — never mixes ARS and USD. */
+export function summarizeMonthByCurrency(
+  transactions: Transaction[],
+  accounts: Account[]
+): MonthlySummaryByCurrency {
+  const accountCurrency = new Map(
+    accounts.map((a) => [a.id, a.currency_code || "ARS"])
+  );
+  const buckets: Record<
+    string,
+    { incomeCents: number; expenseCents: number; investmentCents: number }
+  > = {};
+
+  for (const t of transactions) {
+    if (t.type === "transfer") continue;
+    const currency =
+      accountCurrency.get(t.account_id) ?? t.currency_code ?? "ARS";
+    if (!buckets[currency]) {
+      buckets[currency] = {
+        incomeCents: 0,
+        expenseCents: 0,
+        investmentCents: 0,
+      };
+    }
+    if (t.type === "income") buckets[currency].incomeCents += t.amount_cents;
+    if (t.type === "expense") buckets[currency].expenseCents += t.amount_cents;
+    if (t.type === "investment") {
+      buckets[currency].investmentCents += t.amount_cents;
+    }
+  }
+
+  const result: MonthlySummaryByCurrency = {};
+  for (const [currency, bucket] of Object.entries(buckets)) {
+    const savingsCents =
+      bucket.incomeCents - bucket.expenseCents - bucket.investmentCents;
+    result[currency] = {
+      ...bucket,
+      savingsCents,
+      savingsRate:
+        bucket.incomeCents > 0
+          ? (savingsCents / bucket.incomeCents) * 100
+          : 0,
+    };
+  }
+  return result;
+}
+
+export function summarizeMonth(
+  transactions: Transaction[],
+  accounts?: Account[]
+): MonthlySummary {
+  if (!accounts || accounts.length === 0) {
+    return summarizeMonthForCurrency(transactions);
+  }
+  const byCurrency = summarizeMonthByCurrency(transactions, accounts);
+  if (byCurrency.ARS) return byCurrency.ARS;
+  return Object.values(byCurrency)[0] ?? emptyMonthlySummary();
+}
+
+export function pickPrimaryCurrency(
+  amounts: Record<string, number>,
+  fallback = "ARS"
+): string {
+  if (amounts.ARS != null) return "ARS";
+  const keys = Object.keys(amounts);
+  return keys[0] ?? fallback;
 }
 
 export function savingsTrafficLight(rate: number): TrafficLight {
@@ -95,24 +191,57 @@ export function buildDashboardMetrics(
   emergencyFundCents?: number
 ): DashboardMetrics {
   const monthTx = filterByMonth(transactions, year, month);
-  const summary = summarizeMonth(monthTx);
+  const byCurrency = summarizeMonthByCurrency(monthTx, accounts);
+  const primaryCurrency = pickPrimaryCurrency(
+    Object.fromEntries(
+      Object.entries(byCurrency).map(([c, s]) => [c, s.incomeCents + s.expenseCents])
+    ),
+    accounts[0]?.currency_code ?? "ARS"
+  );
+  const summary = byCurrency[primaryCurrency] ?? emptyMonthlySummary();
   const status = savingsTrafficLight(summary.savingsRate);
 
   const last3 = [0, 1, 2].map((i) => {
     const d = subMonths(new Date(year, month - 1), i);
-    return summarizeMonth(
-      filterByMonth(transactions, d.getFullYear(), d.getMonth() + 1)
-    ).expenseCents;
+    const monthSummary = summarizeMonthByCurrency(
+      filterByMonth(transactions, d.getFullYear(), d.getMonth() + 1),
+      accounts
+    );
+    return monthSummary[primaryCurrency]?.expenseCents ?? 0;
   });
   const avgExpense =
     last3.reduce((a, b) => a + b, 0) / (last3.filter((e) => e > 0).length || 1);
 
-  const cashCents = totalCashBalanceFromTransactions(transactions, accounts);
-  const investmentAssetsCents = totalInvestedCents(transactions);
+  const cashByCurrency = cashBalancesByCurrency(transactions, accounts);
+  const investmentByCurrencyMap = investedByCurrency(transactions, accounts);
+  const netWorthByCurrency: Record<string, number> = {};
+  const allCurrencies = new Set([
+    ...Object.keys(cashByCurrency),
+    ...Object.keys(investmentByCurrencyMap),
+  ]);
+  for (const currency of allCurrencies) {
+    netWorthByCurrency[currency] =
+      (cashByCurrency[currency] ?? 0) +
+      (investmentByCurrencyMap[currency] ?? 0);
+  }
+
+  const cashCents = cashByCurrency[primaryCurrency] ?? 0;
+  const investmentAssetsCents = investmentByCurrencyMap[primaryCurrency] ?? 0;
   const netWorthCents = cashCents + investmentAssetsCents;
 
   const fund = emergencyFundCents ?? cashCents;
   const months = emergencyMonths(fund, avgExpense);
+
+  const incomeByCurrency: Record<string, number> = {};
+  const expenseByCurrency: Record<string, number> = {};
+  const investmentMonthByCurrency: Record<string, number> = {};
+  const savingsByCurrency: Record<string, number> = {};
+  for (const [currency, s] of Object.entries(byCurrency)) {
+    incomeByCurrency[currency] = s.incomeCents;
+    expenseByCurrency[currency] = s.expenseCents;
+    investmentMonthByCurrency[currency] = s.investmentCents;
+    savingsByCurrency[currency] = s.savingsCents;
+  }
 
   return {
     ...summary,
@@ -122,6 +251,14 @@ export function buildDashboardMetrics(
     emergencyMonths: months,
     status,
     statusMessage: statusMessage(status),
+    cashByCurrency,
+    incomeByCurrency,
+    expenseByCurrency,
+    investmentByCurrency: investmentMonthByCurrency,
+    investedAssetsByCurrency: investmentByCurrencyMap,
+    savingsByCurrency,
+    netWorthByCurrency,
+    primaryCurrency,
   };
 }
 
@@ -134,7 +271,9 @@ export interface ChartPoint {
 
 export function last6MonthsChart(
   transactions: Transaction[],
-  refDate = new Date()
+  refDate = new Date(),
+  accounts: Account[] = [],
+  currency = "ARS"
 ): ChartPoint[] {
   const points: ChartPoint[] = [];
 
@@ -142,7 +281,12 @@ export function last6MonthsChart(
     const d = subMonths(refDate, i);
     const y = d.getFullYear();
     const m = d.getMonth() + 1;
-    const s = summarizeMonth(filterByMonth(transactions, y, m));
+    const monthTx = filterByMonth(transactions, y, m);
+    const s =
+      accounts.length > 0
+        ? summarizeMonthByCurrency(monthTx, accounts)[currency] ??
+          emptyMonthlySummary()
+        : summarizeMonthForCurrency(monthTx);
     points.push({
       label: format(d, "MMM"),
       income: s.incomeCents / 100,

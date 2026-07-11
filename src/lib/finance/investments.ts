@@ -40,6 +40,24 @@ export function totalInvestedCents(transactions: Transaction[]): number {
   );
 }
 
+/** Investment totals keyed by transaction/account currency. */
+export function investedByCurrency(
+  transactions: Transaction[],
+  accounts: { id: string; currency_code: string }[] = []
+): Record<string, number> {
+  const accountCurrency = new Map(
+    accounts.map((a) => [a.id, a.currency_code || "ARS"])
+  );
+  const map: Record<string, number> = {};
+  for (const tx of transactions) {
+    if (tx.type !== "investment") continue;
+    const currency =
+      accountCurrency.get(tx.account_id) ?? tx.currency_code ?? "ARS";
+    map[currency] = (map[currency] ?? 0) + tx.amount_cents;
+  }
+  return map;
+}
+
 export function buildPortfolioSummary(
   transactions: Transaction[],
   categories: Category[],
