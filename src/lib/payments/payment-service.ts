@@ -2,6 +2,11 @@ import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
 import { createMercadoPagoAdapter } from "@/lib/payments/providers/mercadopago/adapter";
 import { isMercadoPagoConfigured } from "@/lib/payments/providers/mercadopago/config";
 import {
+  buildMercadoPagoBackUrls,
+  buildMercadoPagoNotificationUrl,
+  resolveMercadoPagoPublicOrigin,
+} from "@/lib/payments/providers/mercadopago/urls";
+import {
   advanceRecurringExpenseAfterPayment,
   getPaymentAttemptByExternalReference,
   getPaymentAttemptById,
@@ -41,13 +46,6 @@ function getAdapter(provider: PaymentProviderId): PaymentAdapter {
       throw new Error(`Unsupported payment provider: ${_exhaustive}`);
     }
   }
-}
-
-function appOrigin(requestOrigin: string): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    requestOrigin.replace(/\/$/, "")
-  );
 }
 
 /**
@@ -113,7 +111,25 @@ export class PaymentService {
       metadata: input.metadata ?? {},
     });
 
-    const origin = appOrigin(requestOrigin);
+    // MP rejects localhost/http for back_urls. Only attach when we have a
+    // public HTTPS origin (production domain or tunnel like ngrok).
+    const publicOrigin = resolveMercadoPagoPublicOrigin(requestOrigin);
+    const backUrls = publicOrigin
+      ? buildMercadoPagoBackUrls(publicOrigin, attemptId)
+      : null;
+    const notificationUrl = publicOrigin
+      ? buildMercadoPagoNotificationUrl(publicOrigin)
+      : null;
+
+    if (!publicOrigin) {
+      console.warn(
+        "[payments] NEXT_PUBLIC_APP_URL is not a public HTTPS URL. " +
+          "Creating preference without back_urls/auto_return/notification_url. " +
+          "Set NEXT_PUBLIC_APP_URL to your production domain or an HTTPS tunnel " +
+          "(e.g. ngrok) for return redirects and webhooks."
+      );
+    }
+
     const adapter = getAdapter("mercadopago");
 
     const preference = await adapter.createPreference({
@@ -121,12 +137,8 @@ export class PaymentService {
       title: input.description || "Gasto",
       amountCents: input.amountCents,
       currencyCode: "ARS",
-      notificationUrl: `${origin}/api/payments/mercadopago/webhook`,
-      backUrls: {
-        success: `${origin}/pagos/resultado?attempt_id=${attemptId}&status=success`,
-        pending: `${origin}/pagos/resultado?attempt_id=${attemptId}&status=pending`,
-        failure: `${origin}/pagos/resultado?attempt_id=${attemptId}&status=failure`,
-      },
+      notificationUrl,
+      backUrls,
       payerEmail: input.payerEmail,
       metadata: {
         attempt_id: attemptId,

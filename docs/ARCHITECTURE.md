@@ -142,5 +142,5 @@ sequenceDiagram
   - `MERCADOPAGO_ACCESS_TOKEN` — Access Token de Mercado Pago (solo servidor; test o producción)
   - `MERCADOPAGO_WEBHOOK_SECRET` — Secret de firma de webhooks (solo servidor)
   - `MERCADOPAGO_ENV` — `sandbox` o `production` (default: sandbox)
-  - `NEXT_PUBLIC_APP_URL` — URL pública de la app (back_urls + notification_url); en local puede omitirse y se usa el origin del request
+  - `NEXT_PUBLIC_APP_URL` — URL pública HTTPS de la app (back_urls + notification_url). Obligatorio en producción. En local usá un tunnel HTTPS (ngrok); `http://localhost` no es válido para Mercado Pago.
   - `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` — opcional (Checkout Pro por redirect no la requiere en el cliente)

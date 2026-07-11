@@ -66,12 +66,16 @@ export interface CreatePreferenceParams {
   title: string;
   amountCents: number;
   currencyCode: "ARS";
-  notificationUrl: string;
-  backUrls: {
+  /** Omit when not a public HTTPS URL (e.g. localhost). */
+  notificationUrl?: string | null;
+  /** Omit entirely when URLs are not MP-acceptable (localhost / http). */
+  backUrls?: {
     success: string;
     pending: string;
     failure: string;
-  };
+  } | null;
+  /** Only set when back_urls.success is valid; never send alone. */
+  autoReturn?: "approved";
   payerEmail?: string | null;
   metadata?: Record<string, unknown>;
 }

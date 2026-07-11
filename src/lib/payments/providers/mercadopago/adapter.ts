@@ -11,6 +11,10 @@ import {
   getMercadoPagoWebhookSecret,
   isMercadoPagoSandbox,
 } from "@/lib/payments/providers/mercadopago/config";
+import {
+  isMercadoPagoPublicUrl,
+  resolveAutoReturn,
+} from "@/lib/payments/providers/mercadopago/urls";
 
 const MP_API_BASE = "https://api.mercadopago.com";
 
@@ -35,10 +39,35 @@ function mapMpStatus(status: string | undefined): PaymentAttemptStatus {
   }
 }
 
-async function mpFetch<T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> {
+function mpErrorMessage(body: unknown, status: number): string {
+  if (!body || typeof body !== "object") {
+    return `Mercado Pago API error (${status})`;
+  }
+
+  const record = body as {
+    message?: unknown;
+    error?: unknown;
+    cause?: Array<{ description?: string; code?: string }>;
+  };
+
+  const causes = Array.isArray(record.cause)
+    ? record.cause
+        .map((c) => c.description || c.code)
+        .filter(Boolean)
+        .join("; ")
+    : "";
+
+  const message =
+    typeof record.message === "string"
+      ? record.message
+      : typeof record.error === "string"
+        ? record.error
+        : `Mercado Pago API error (${status})`;
+
+  return causes ? `${message} (${causes})` : message;
+}
+
+async function mpFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const accessToken = getMercadoPagoAccessToken();
   const response = await fetch(`${MP_API_BASE}${path}`, {
     ...init,
@@ -53,14 +82,7 @@ async function mpFetch<T>(
   const body = (await response.json().catch(() => null)) as T | null;
 
   if (!response.ok) {
-    const message =
-      body &&
-      typeof body === "object" &&
-      "message" in body &&
-      typeof (body as { message: unknown }).message === "string"
-        ? (body as { message: string }).message
-        : `Mercado Pago API error (${response.status})`;
-    throw new Error(message);
+    throw new Error(mpErrorMessage(body, response.status));
   }
 
   return body as T;
@@ -98,7 +120,28 @@ export class MercadoPagoAdapter implements PaymentAdapter {
     // unit_price is decimal major units (ARS pesos), not cents.
     const unitPrice = Number((params.amountCents / 100).toFixed(2));
 
-    const payload = {
+    const backUrls =
+      params.backUrls &&
+      isMercadoPagoPublicUrl(params.backUrls.success) &&
+      isMercadoPagoPublicUrl(params.backUrls.pending) &&
+      isMercadoPagoPublicUrl(params.backUrls.failure)
+        ? {
+            success: params.backUrls.success,
+            pending: params.backUrls.pending,
+            failure: params.backUrls.failure,
+          }
+        : null;
+
+    // Never send auto_return without a valid back_urls.success.
+    const autoReturn = resolveAutoReturn(backUrls);
+
+    const notificationUrl =
+      params.notificationUrl &&
+      isMercadoPagoPublicUrl(params.notificationUrl)
+        ? params.notificationUrl
+        : null;
+
+    const payload: Record<string, unknown> = {
       items: [
         {
           id: params.externalReference.slice(0, 64),
@@ -109,14 +152,21 @@ export class MercadoPagoAdapter implements PaymentAdapter {
         },
       ],
       external_reference: params.externalReference,
-      notification_url: params.notificationUrl,
-      back_urls: params.backUrls,
-      auto_return: "approved" as const,
       metadata: params.metadata ?? {},
-      ...(params.payerEmail
-        ? { payer: { email: params.payerEmail } }
-        : {}),
     };
+
+    if (backUrls) {
+      payload.back_urls = backUrls;
+    }
+    if (autoReturn && backUrls?.success) {
+      payload.auto_return = autoReturn;
+    }
+    if (notificationUrl) {
+      payload.notification_url = notificationUrl;
+    }
+    if (params.payerEmail) {
+      payload.payer = { email: params.payerEmail };
+    }
 
     const data = await mpFetch<MpPreferenceResponse>("/checkout/preferences", {
       method: "POST",
@@ -170,8 +220,6 @@ export class MercadoPagoAdapter implements PaymentAdapter {
   }): boolean {
     const secret = getMercadoPagoWebhookSecret();
     if (!secret) {
-      // Fail closed when a secret is configured in production expectations.
-      // If unset, reject so misconfiguration does not silently accept forgeries.
       return false;
     }
 
