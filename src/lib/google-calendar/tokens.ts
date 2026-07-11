@@ -166,7 +166,7 @@ export async function exchangeCodeForTokens(
 
   console.info("[Google OAuth] Token exchange request", {
     redirect_uri: redirectUri,
-    client_id: clientId,
+    client_id_suffix: clientId.slice(-8),
     grant_type: "authorization_code",
     code_length: code.length,
   });
