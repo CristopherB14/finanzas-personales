@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
@@ -192,6 +192,7 @@ export function TransferForm({
     () => initial?.description ?? ""
   );
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -219,6 +220,7 @@ export function TransferForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
     setError(null);
 
     const cents = parseMoneyInput(amount);
@@ -272,6 +274,7 @@ export function TransferForm({
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       await onSubmit({
@@ -291,6 +294,7 @@ export function TransferForm({
       router.push("/transferencias");
       router.refresh();
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

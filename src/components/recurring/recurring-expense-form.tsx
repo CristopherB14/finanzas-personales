@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
@@ -245,6 +245,7 @@ export function RecurringExpenseForm({
   const [syncToGoogleCalendarEnabled, setSyncToGoogleCalendarEnabled] =
     useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -267,6 +268,7 @@ export function RecurringExpenseForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
     setError(null);
 
     const cents = parseMoneyInput(amount);
@@ -321,6 +323,7 @@ export function RecurringExpenseForm({
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       await onSubmit({
@@ -378,6 +381,7 @@ export function RecurringExpenseForm({
       router.push(ROUTES.transactions);
       router.refresh();
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

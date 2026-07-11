@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
-import { localDb, mergeRemoteTransactions } from "@/lib/db/local-db";
+import {
+  dedupeLocalTransactionsByClientId,
+  localDb,
+  mergeRemoteTransactions,
+  reconcileLocalTransactionId,
+} from "@/lib/db/local-db";
 import type { LocalTransaction } from "@/types/database";
 
 export type SyncState = "idle" | "syncing" | "offline" | "error";
@@ -8,6 +13,8 @@ let listeners: ((state: SyncState) => void)[] = [];
 let completeListeners: (() => void)[] = [];
 let activeSyncCleanup: (() => void) | null = null;
 let activeSyncUserId: string | null = null;
+/** Prevent overlapping sync runs for the same user. */
+let syncInFlight: Promise<void> | null = null;
 
 export function onSyncStateChange(cb: (state: SyncState) => void) {
   listeners.push(cb);
@@ -33,6 +40,10 @@ function notify(state: SyncState) {
 
 function notifyComplete() {
   completeListeners.forEach((l) => l());
+}
+
+function remoteTransactionId(tx: LocalTransaction): string {
+  return tx.id.startsWith("local-") ? tx.client_id : tx.id;
 }
 
 export async function pushPendingChanges(userId: string): Promise<void> {
@@ -68,30 +79,35 @@ export async function pushPendingChanges(userId: string): Promise<void> {
     }
 
     const tx = item.payload as unknown as LocalTransaction;
+    const remoteId = remoteTransactionId(tx);
 
-    const { error } = await supabase.from("transactions").upsert(
-      {
-        id: tx.id.startsWith("local-") ? undefined : tx.id,
-        user_id: userId,
-        account_id: tx.account_id,
-        to_account_id: tx.to_account_id ?? null,
-        category_id: tx.category_id,
-        investment_asset_id: tx.investment_asset_id ?? null,
-        type: tx.type,
-        amount_cents: tx.amount_cents,
-        currency_code: tx.currency_code,
-        original_amount_cents: tx.original_amount_cents ?? tx.amount_cents,
-        exchange_rate: tx.exchange_rate ?? null,
-        converted_amount_cents: tx.converted_amount_cents ?? null,
-        exchange_rate_source: tx.exchange_rate_source ?? null,
-        transaction_date: tx.transaction_date,
-        description: tx.description,
-        tags: tx.tags,
-        client_id: tx.client_id,
-        recurring_expense_id: tx.recurring_expense_id ?? null,
-      },
-      { onConflict: "user_id,client_id" }
-    );
+    const { data, error } = await supabase
+      .from("transactions")
+      .upsert(
+        {
+          id: remoteId,
+          user_id: userId,
+          account_id: tx.account_id,
+          to_account_id: tx.to_account_id ?? null,
+          category_id: tx.category_id,
+          investment_asset_id: tx.investment_asset_id ?? null,
+          type: tx.type,
+          amount_cents: tx.amount_cents,
+          currency_code: tx.currency_code,
+          original_amount_cents: tx.original_amount_cents ?? tx.amount_cents,
+          exchange_rate: tx.exchange_rate ?? null,
+          converted_amount_cents: tx.converted_amount_cents ?? null,
+          exchange_rate_source: tx.exchange_rate_source ?? null,
+          transaction_date: tx.transaction_date,
+          description: tx.description,
+          tags: tx.tags,
+          client_id: tx.client_id,
+          recurring_expense_id: tx.recurring_expense_id ?? null,
+        },
+        { onConflict: "user_id,client_id" }
+      )
+      .select("id")
+      .single();
 
     if (error) {
       notify("error");
@@ -99,7 +115,7 @@ export async function pushPendingChanges(userId: string): Promise<void> {
     }
 
     await localDb.syncQueue.delete(item.id!);
-    await localDb.transactions.update(tx.id, { _syncStatus: "synced" });
+    await reconcileLocalTransactionId(tx, data?.id ?? remoteId);
   }
 
   notify("idle");
@@ -128,6 +144,8 @@ export async function pullRemoteChanges(userId: string): Promise<void> {
     await mergeRemoteTransactions(data);
   }
 
+  await dedupeLocalTransactionsByClientId(userId);
+
   await localDb?.meta.put({
     key: "lastSync",
     value: new Date().toISOString(),
@@ -135,14 +153,24 @@ export async function pullRemoteChanges(userId: string): Promise<void> {
 }
 
 export async function syncAll(userId: string): Promise<void> {
-  try {
-    await pushPendingChanges(userId);
-    await pullRemoteChanges(userId);
-    notify("idle");
-    notifyComplete();
-  } catch {
-    notify("error");
+  if (syncInFlight) {
+    return syncInFlight;
   }
+
+  syncInFlight = (async () => {
+    try {
+      await pushPendingChanges(userId);
+      await pullRemoteChanges(userId);
+      notify("idle");
+      notifyComplete();
+    } catch {
+      notify("error");
+    } finally {
+      syncInFlight = null;
+    }
+  })();
+
+  return syncInFlight;
 }
 
 export function startAutoSync(userId: string, intervalMs = 60000) {

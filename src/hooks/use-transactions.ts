@@ -9,14 +9,20 @@ import {
   recalculateAllInvestmentAssets,
 } from "@/lib/data/investment-assets";
 import {
+  dedupeLocalTransactionsByClientId,
   deleteLocalTransaction,
+  getLocalTransactionByClientId,
   getLocalTransactions,
   mergeRemoteTransactions,
+  reconcileLocalTransactionId,
   saveLocalTransaction,
   updateLocalTransaction,
 } from "@/lib/db/local-db";
 import { onSyncComplete, notifySyncComplete } from "@/lib/sync/sync-engine";
 import type { LocalTransaction, TransactionType } from "@/types/database";
+
+/** In-flight creates keyed by client_id — ignores concurrent duplicate submits. */
+const inflightCreates = new Map<string, Promise<LocalTransaction>>();
 
 export type TransactionInput = {
   account_id: string;
@@ -64,34 +70,48 @@ async function resolveInvestmentAssetId(
   return asset.id;
 }
 
+function remoteTransactionId(tx: LocalTransaction): string {
+  // Prefer a stable UUID so local and remote share the same primary key.
+  // Legacy rows used `local-{client_id}`; map those to client_id on upsert.
+  return tx.id.startsWith("local-") ? tx.client_id : tx.id;
+}
+
 async function upsertRemoteTransaction(
   userId: string,
   tx: LocalTransaction
-): Promise<void> {
+): Promise<string> {
   const supabase = createClient();
-  await supabase.from("transactions").upsert(
-    {
-      id: tx.id.startsWith("local-") ? undefined : tx.id,
-      user_id: userId,
-      account_id: tx.account_id,
-      to_account_id: tx.to_account_id ?? null,
-      category_id: tx.category_id,
-      investment_asset_id: tx.investment_asset_id ?? null,
-      type: tx.type,
-      amount_cents: tx.amount_cents,
-      currency_code: tx.currency_code,
-      original_amount_cents: tx.original_amount_cents ?? tx.amount_cents,
-      exchange_rate: tx.exchange_rate ?? null,
-      converted_amount_cents: tx.converted_amount_cents ?? null,
-      exchange_rate_source: tx.exchange_rate_source ?? null,
-      transaction_date: tx.transaction_date,
-      description: tx.description,
-      tags: tx.tags,
-      client_id: tx.client_id,
-      recurring_expense_id: tx.recurring_expense_id ?? null,
-    },
-    { onConflict: "user_id,client_id" }
-  );
+  const remoteId = remoteTransactionId(tx);
+  const { data, error } = await supabase
+    .from("transactions")
+    .upsert(
+      {
+        id: remoteId,
+        user_id: userId,
+        account_id: tx.account_id,
+        to_account_id: tx.to_account_id ?? null,
+        category_id: tx.category_id,
+        investment_asset_id: tx.investment_asset_id ?? null,
+        type: tx.type,
+        amount_cents: tx.amount_cents,
+        currency_code: tx.currency_code,
+        original_amount_cents: tx.original_amount_cents ?? tx.amount_cents,
+        exchange_rate: tx.exchange_rate ?? null,
+        converted_amount_cents: tx.converted_amount_cents ?? null,
+        exchange_rate_source: tx.exchange_rate_source ?? null,
+        transaction_date: tx.transaction_date,
+        description: tx.description,
+        tags: tx.tags,
+        client_id: tx.client_id,
+        recurring_expense_id: tx.recurring_expense_id ?? null,
+      },
+      { onConflict: "user_id,client_id" }
+    )
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data?.id ?? remoteId;
 }
 
 async function deleteRemoteTransaction(
@@ -124,6 +144,7 @@ async function loadLocalTransactions(
 async function bootstrapTransactions(
   userId: string
 ): Promise<LocalTransaction[]> {
+  await dedupeLocalTransactionsByClientId(userId);
   const local = await loadLocalTransactions(userId);
   if (local.length > 0 || !navigator.onLine) {
     return local;
@@ -139,6 +160,7 @@ async function bootstrapTransactions(
 
   if (data?.length) {
     await mergeRemoteTransactions(data);
+    await dedupeLocalTransactionsByClientId(userId);
     return loadLocalTransactions(userId);
   }
 
@@ -186,54 +208,89 @@ export function useTransactions(userId: string | undefined) {
     if (!userId) throw new Error("No autenticado");
 
     const client_id = input.client_id ?? uuidv4();
-    let investment_asset_id: string | null = null;
 
-    if (input.type === "investment") {
-      investment_asset_id = await resolveInvestmentAssetId(
-        userId,
-        input.category_id,
-        input.currency_code
-      );
+    // Idempotency: return existing row / in-flight create for the same client_id.
+    const existingLocal =
+      transactions.find((t) => t.client_id === client_id) ??
+      (await getLocalTransactionByClientId(client_id));
+    if (existingLocal) {
+      return existingLocal;
     }
 
-    const tx: LocalTransaction = {
-      id: `local-${client_id}`,
-      user_id: userId,
-      client_id,
-      account_id: input.account_id,
-      to_account_id:
-        input.type === "transfer" ? (input.to_account_id ?? null) : null,
-      category_id: input.type === "transfer" ? null : input.category_id,
-      investment_asset_id,
-      type: input.type,
-      amount_cents: input.amount_cents,
-      currency_code: input.currency_code,
-      original_amount_cents: input.original_amount_cents ?? input.amount_cents,
-      exchange_rate: input.exchange_rate ?? null,
-      converted_amount_cents: input.converted_amount_cents ?? null,
-      exchange_rate_source: input.exchange_rate_source ?? null,
-      transaction_date: input.transaction_date,
-      description: input.description ?? null,
-      tags: input.tags ?? [],
-      recurring_expense_id: input.recurring_expense_id ?? null,
-      updated_at: new Date().toISOString(),
-      _syncStatus: "pending",
-      _localOnly: true,
-    };
+    const inflight = inflightCreates.get(client_id);
+    if (inflight) {
+      return inflight;
+    }
 
-    await saveLocalTransaction(tx);
-    const next = sortTransactions([tx, ...transactions]);
-    setTransactions(next);
+    const createPromise = (async () => {
+      let investment_asset_id: string | null = null;
 
-    if (navigator.onLine) {
-      await upsertRemoteTransaction(userId, tx);
       if (input.type === "investment") {
-        await syncInvestmentAssetsIfNeeded(userId, next);
+        investment_asset_id = await resolveInvestmentAssetId(
+          userId,
+          input.category_id,
+          input.currency_code
+        );
       }
-    }
 
-    notifySyncComplete();
-    return tx;
+      // Use client_id as the primary key so local and remote share one id.
+      let tx: LocalTransaction = {
+        id: client_id,
+        user_id: userId,
+        client_id,
+        account_id: input.account_id,
+        to_account_id:
+          input.type === "transfer" ? (input.to_account_id ?? null) : null,
+        category_id: input.type === "transfer" ? null : input.category_id,
+        investment_asset_id,
+        type: input.type,
+        amount_cents: input.amount_cents,
+        currency_code: input.currency_code,
+        original_amount_cents: input.original_amount_cents ?? input.amount_cents,
+        exchange_rate: input.exchange_rate ?? null,
+        converted_amount_cents: input.converted_amount_cents ?? null,
+        exchange_rate_source: input.exchange_rate_source ?? null,
+        transaction_date: input.transaction_date,
+        description: input.description ?? null,
+        tags: input.tags ?? [],
+        recurring_expense_id: input.recurring_expense_id ?? null,
+        updated_at: new Date().toISOString(),
+        _syncStatus: "pending",
+        _localOnly: true,
+      };
+
+      await saveLocalTransaction(tx);
+      setTransactions((prev) => {
+        if (prev.some((t) => t.client_id === client_id)) {
+          return prev;
+        }
+        return sortTransactions([tx, ...prev]);
+      });
+
+      if (navigator.onLine) {
+        const remoteId = await upsertRemoteTransaction(userId, tx);
+        tx = await reconcileLocalTransactionId(tx, remoteId);
+        setTransactions((prev) =>
+          sortTransactions(
+            prev.map((t) => (t.client_id === client_id ? tx : t))
+          )
+        );
+        if (input.type === "investment") {
+          const next = await loadLocalTransactions(userId);
+          await syncInvestmentAssetsIfNeeded(userId, next);
+        }
+      }
+
+      notifySyncComplete();
+      return tx;
+    })();
+
+    inflightCreates.set(client_id, createPromise);
+    try {
+      return await createPromise;
+    } finally {
+      inflightCreates.delete(client_id);
+    }
   };
 
   const editTransaction = async (
@@ -283,13 +340,19 @@ export function useTransactions(userId: string | undefined) {
     setTransactions(next);
 
     if (navigator.onLine) {
-      await upsertRemoteTransaction(userId, tx);
+      const remoteId = await upsertRemoteTransaction(userId, tx);
+      const reconciled = await reconcileLocalTransactionId(tx, remoteId);
+      const reconciledNext = sortTransactions(
+        next.map((t) => (t.client_id === clientId ? reconciled : t))
+      );
+      setTransactions(reconciledNext);
       if (
         input.type === "investment" ||
         existing.type === "investment"
       ) {
-        await syncInvestmentAssetsIfNeeded(userId, next);
+        await syncInvestmentAssetsIfNeeded(userId, reconciledNext);
       }
+      return reconciled;
     }
 
     return tx;

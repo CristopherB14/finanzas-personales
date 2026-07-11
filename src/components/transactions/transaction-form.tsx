@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
@@ -198,6 +198,7 @@ export function TransactionForm({
   const [syncToGoogleCalendarEnabled, setSyncToGoogleCalendarEnabled] =
     useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -251,6 +252,7 @@ export function TransactionForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
     setError(null);
 
     const cents = parseMoneyInput(amount);
@@ -293,6 +295,7 @@ export function TransactionForm({
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       const tx = await onSubmit({
@@ -342,6 +345,7 @@ export function TransactionForm({
       router.push(resolvedListPath);
       router.refresh();
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
