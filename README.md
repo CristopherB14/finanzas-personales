@@ -1,67 +1,90 @@
 # Klaro — Finanzas personales claras
 
-**Klaro** es una aplicación web **offline-first** para gestionar ingresos, gastos, presupuesto y situación financiera personal. Pensada para personas comunes, no para analistas financieros.
+**Klaro** es una aplicación web **offline-first** (PWA) para gestionar ingresos, gastos,
+transferencias, inversiones y presupuesto personal. Pensada para personas comunes, no para
+analistas financieros.
 
-## Características (MVP)
+## Características
 
-- Dashboard con patrimonio, ahorro, semáforo y fondo de emergencia
-- Registro rápido de ingresos y gastos
-- Presupuesto por categoría con alertas
-- Funciona sin internet (IndexedDB + sincronización)
-- PWA instalable (Android, iOS, escritorio)
-- Autenticación con Supabase
+- Dashboard con patrimonio, ahorro, semáforo de estado y meses de fondo de emergencia.
+- Registro de ingresos, gastos, transferencias e inversiones, con soporte ARS/USD.
+- Gastos recurrentes con recordatorios en Google Calendar.
+- Presupuesto por categoría/subcategoría (monto fijo o % del ingreso) con alertas visuales.
+- Pagos de gastos vía Mercado Pago (Checkout Pro).
+- Funciona sin conexión (IndexedDB + sincronización automática) e instalable como PWA.
+- Autenticación con Supabase (email + contraseña).
 
 ## Stack
 
-- **Frontend**: Next.js, React, TypeScript, Tailwind, shadcn-style UI, Recharts
-- **Backend**: Supabase (PostgreSQL + Auth + RLS)
-- **Offline**: Dexie (IndexedDB), Service Worker
+- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Radix UI, Recharts.
+- **Backend**: Supabase (PostgreSQL + Auth + Row Level Security).
+- **Offline**: Dexie (IndexedDB) + Service Worker.
+- **Integraciones**: Google Calendar API, Mercado Pago, cotización BNA/dolarapi.
 
-## Documentación
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full breakdown.
 
-| Documento | Contenido |
-|-----------|-----------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura y sync |
-| [docs/DATABASE.md](docs/DATABASE.md) | Modelo de datos |
-| [docs/UX-DESIGN.md](docs/UX-DESIGN.md) | Wireframes y UI |
-| [docs/USER-FLOWS.md](docs/USER-FLOWS.md) | Flujos de usuario |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Roadmap MVP → v2 |
-| [docs/MVP.md](docs/MVP.md) | Alcance MVP |
-
-## Inicio rápido
+## Quick start
 
 ```bash
-# Crear .env.local con las variables requeridas (ver docs/ARCHITECTURE.md):
-# NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-# SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-# GOOGLE_REDIRECT_URI (localhost en local; dominio de producción en .env)
-
-# En Supabase SQL Editor, ejecutar:
-# supabase/migrations/20250602000000_initial_schema.sql
-
 npm install
+cp .env.example .env.local   # fill in your Supabase project (see docs/environment.md)
 npm run dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
+
+To set up the database, run every file in `supabase/migrations/` against your Supabase project, in
+filename order (e.g. via the SQL Editor, or the Supabase CLI). See
+[`docs/database.md`](docs/database.md) and [`docs/deploy.md`](docs/deploy.md).
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build (also type-checks) |
+| `npm run start` | Run the production build |
+| `npm run lint` | ESLint |
+
+There is no automated test suite yet — see [`docs/testing.md`](docs/testing.md).
+
+## Documentation
+
+This repo is documented for both humans and AI coding agents (see [`CLAUDE.md`](CLAUDE.md), the
+entry point for Claude Code).
+
+| Doc | Contents |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | AI agent entry point: conventions, constraints, workflow |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design, folder structure, sync flow |
+| [`DECISIONS.md`](DECISIONS.md) / [`docs/adr/`](docs/adr/) | Why things are built the way they are |
+| [`ROADMAP.md`](ROADMAP.md) | What's done, shipped beyond MVP, and not started |
+| [`TODO.md`](TODO.md) | Actionable pending work |
+| [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | Known gaps and sharp edges |
+| [`CHANGELOG.md`](CHANGELOG.md) | Change history |
+| [`docs/api.md`](docs/api.md) | API routes |
+| [`docs/auth.md`](docs/auth.md) | Auth flow |
+| [`docs/database.md`](docs/database.md) | Schema, RLS, relations |
+| [`docs/environment.md`](docs/environment.md) | Environment variables |
+| [`docs/deploy.md`](docs/deploy.md) | Deployment process |
+| [`docs/testing.md`](docs/testing.md) | Testing strategy |
+| [`docs/conventions.md`](docs/conventions.md) | Coding conventions |
+| [`docs/domain.md`](docs/domain.md) | Business terminology & rules |
+| [`docs/scripts.md`](docs/scripts.md) | npm scripts & migrations |
 
 ## Estructura
 
 ```
-src/app/          → Rutas (landing, auth, dashboard, gastos, ingresos, presupuesto)
-src/components/   → UI, gráficos, layout
-src/lib/          → Supabase, sync, cálculos financieros, DB local
+src/app/          → Rutas (landing, login/registro, dashboard, transacciones, presupuesto, ...)
+src/components/   → UI, gráficos, layout, formularios
+src/lib/          → Supabase, sync, cálculos financieros, DB local, pagos, Google Calendar
 supabase/         → Migraciones SQL
-docs/             → Diseño y arquitectura
+docs/             → Documentación técnica
 ```
 
-## Roadmap
+## Disclaimer
 
-Ver [docs/ROADMAP.md](docs/ROADMAP.md) para v1.0 (deudas, patrimonio, Excel), v1.5 (inversiones, IA) y v2.0 (asistente completo, hogar compartido).
-
-## Disclaimer IA (futuro)
-
-El asistente financiero es **educativo**. No constituye asesoramiento profesional ni recomendaciones de inversión específicas.
+La app no ofrece asesoramiento financiero profesional ni recomendaciones de inversión.
 
 ## Licencia
 
